@@ -217,7 +217,7 @@ Rectangle {
     acceptedButtons: Qt.RightButton
     hoverEnabled: true
     
-    onEntered: TooltipService.show(root, buildTooltip())
+    onEntered: TooltipService.show(root, buildTooltip(), BarService.getTooltipDirection())
     onExited: TooltipService.hide()
   }
 
