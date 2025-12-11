@@ -1,0 +1,12 @@
+{
+  "arrowType": "caret",
+  "byteThresholdActive": 1024,
+  "fontSizeModifier": 0.75,
+  "iconSizeModifier": 1.15,
+  "minWidth": 0,
+  "spacingInbetween": 1,
+  "colorSilent": "#1f1f1f",
+  "colorTx": "#b3ccbf",
+  "colorRx": "#66dbb2",
+  "colorText": "#4dc6c6c6"
+}
