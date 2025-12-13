@@ -1,0 +1,18 @@
+{
+  "tooltip": {
+    "running": "猫在奔跑",
+    "sleeping": "猫在睡觉"
+  },
+  "settings": {
+    "title": "Catwalk 设置",
+    "minimumThreshold": {
+      "label": "最小 CPU 阈值",
+      "description": "CPU 使用率必须高于此百分比才能让猫开始奔跑"
+    },
+    "currentThreshold": "当前阈值: {value}%"
+  },
+  "panel": {
+    "title": "Catwalk",
+    "cpuLabel": "CPU: {usage}%"
+  }
+}

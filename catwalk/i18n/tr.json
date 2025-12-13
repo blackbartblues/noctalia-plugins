@@ -1,0 +1,18 @@
+{
+  "tooltip": {
+    "running": "Kedi koşuyor",
+    "sleeping": "Kedi uyuyor"
+  },
+  "settings": {
+    "title": "Catwalk Ayarları",
+    "minimumThreshold": {
+      "label": "Minimum CPU Eşiği",
+      "description": "Kedinin koşmaya başlaması için CPU kullanımı bu yüzdeden yüksek olmalı"
+    },
+    "currentThreshold": "Mevcut eşik: {value}%"
+  },
+  "panel": {
+    "title": "Catwalk",
+    "cpuLabel": "CPU: {usage}%"
+  }
+}
