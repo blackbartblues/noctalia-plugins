@@ -61,7 +61,10 @@
       "import-failed": "❌ Import fehlgeschlagen. Überprüfen Sie, ob die Steam-ID korrekt ist und das Profil öffentlich ist.",
       "import-all-exist": "ℹ️ Alle Spiele aus der Wunschliste sind bereits in Ihrer Liste.",
       "import-success": "✅ Import abgeschlossen! {count} Spiele hinzugefügt.",
-      "import-no-games": "ℹ️ Keine Spiele mit Preis in der Wunschliste gefunden."
-    }
+      "import-no-games": "ℹ️ Keine Spiele mit Preis in der Wunschliste gefunden.",
+      "auto-sync-wishlist": "Wunschliste automatisch bei jedem Intervall synchronisieren",
+      "auto-sync-note": "ℹ️ Wenn aktiviert, werden neue Spiele aus Ihrer Steam-Wunschliste automatisch hinzugefügt. Manuelle Spiele werden niemals entfernt."
+    },
+    "open-settings": "Einstellungen öffnen"
   }
 }

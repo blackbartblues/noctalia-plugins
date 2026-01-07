@@ -14,7 +14,9 @@
     "target-price": "🎯 目標:",
     "edit-price": "価格を編集",
     "remove": "削除",
-    "target-reached": "目標価格に到達!",    "below-target": "目標以下",    "above-target": "目標以上",
+    "target-reached": "目標価格に到達!",
+    "below-target": "目標以下",
+    "above-target": "目標以上",
     "edit-target-price": "目標価格を編集",
     "cancel": "キャンセル",
     "save": "保存",
@@ -59,7 +61,10 @@
       "import-failed": "❌ インポートに失敗しました。Steam IDが正しいか、プロフィールが公開されているか確認してください。",
       "import-all-exist": "ℹ️ ウィッシュリストのすべてのゲームは既にリストに追加されています。",
       "import-success": "✅ インポート完了！{count}個のゲームを追加しました。",
-      "import-no-games": "ℹ️ ウィッシュリストに価格のあるゲームが見つかりませんでした。"
-    }
+      "import-no-games": "ℹ️ ウィッシュリストに価格のあるゲームが見つかりませんでした。",
+      "auto-sync-wishlist": "チェック間隔ごとに自動的にウィッシュリストを同期",
+      "auto-sync-note": "ℹ️ 有効にすると、Steamウィッシュリストの新しいゲームが自動的に追加されます。手動ゲームは削除されません。"
+    },
+    "open-settings": "設定を開く"
   }
 }

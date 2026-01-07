@@ -250,8 +250,19 @@ Item {
             }
 
             NIconButton {
+              icon: "settings"
+              tooltipText: pluginApi?.tr("steam-price-watcher.open-settings") || "Open Settings"
+              baseSize: Style.baseWidgetSize * 0.8
+              onClicked: {
+                if (pluginApi) {
+                  pluginApi.openSettings();
+                }
+              }
+            }
+
+            NIconButton {
               icon: "refresh"
-              tooltipText: pluginApi?.tr("steam-price-watcher.refresh") || "Atualizar preços"
+              tooltipText: pluginApi?.tr("steam-price-watcher.refresh") || "Refresh prices"
               baseSize: Style.baseWidgetSize * 0.8
               enabled: !loading
               onClicked: refreshPrices()

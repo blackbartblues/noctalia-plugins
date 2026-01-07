@@ -14,7 +14,9 @@
     "target-price": "🎯 Hedef:",
     "edit-price": "Fiyatı düzenle",
     "remove": "Kaldır",
-    "target-reached": "Hedef fiyata ulaşıldı!",    "below-target": "hedefin altında",    "above-target": "hedefin üstünde",
+    "target-reached": "Hedef fiyata ulaşıldı!",
+    "below-target": "hedefin altında",
+    "above-target": "hedefin üstünde",
     "edit-target-price": "Hedef Fiyatı Düzenle",
     "cancel": "İptal",
     "save": "Kaydet",
@@ -59,7 +61,10 @@
       "import-failed": "❌ İçe aktarma başarısız. Steam ID'nin doğru olduğundan ve profilin herkese açık olduğundan emin olun.",
       "import-all-exist": "ℹ️ İstek listesindeki tüm oyunlar zaten listenizde.",
       "import-success": "✅ İçe aktarma tamamlandı! {count} oyun eklendi.",
-      "import-no-games": "ℹ️ İstek listesinde fiyatı olan oyun bulunamadı."
-    }
+      "import-no-games": "ℹ️ İstek listesinde fiyatı olan oyun bulunamadı.",
+      "auto-sync-wishlist": "Her aralıkta istek listesini otomatik olarak senkronize et",
+      "auto-sync-note": "ℹ️ Etkinleştirildiğinde, Steam istek listenizden yeni oyunlar otomatik olarak eklenecektir. Manuel oyunlar asla kaldırılmayacaktır."
+    },
+    "open-settings": "Ayarları Aç"
   }
 }

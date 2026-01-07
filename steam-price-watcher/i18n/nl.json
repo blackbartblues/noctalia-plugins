@@ -3,9 +3,11 @@
     "loading": "Controleren...",
     "no-games": "Geen games",
     "game": "game",
-    "games": "games",    "of": "van",
+    "games": "games",
+    "of": "van",
     "on-target-section": "🎯 Games op doelprijs",
-    "monitoring-section": "👀 Monitoring",    "refresh": "Prijzen verversen",
+    "monitoring-section": "👀 Monitoring",
+    "refresh": "Prijzen verversen",
     "loading-prices": "Prijzen laden...",
     "no-games-message": "Geen games toegevoegd. Voeg games toe in instellingen.",
     "current-price": "💰 Huidig:",
@@ -59,7 +61,10 @@
       "import-failed": "❌ Importeren mislukt. Controleer of de Steam ID correct is en het profiel openbaar is.",
       "import-all-exist": "ℹ️ Alle games uit de verlanglijst staan al in je lijst.",
       "import-success": "✅ Importeren voltooid! {count} games toegevoegd.",
-      "import-no-games": "ℹ️ Geen games met prijs gevonden in verlanglijst."
-    }
+      "import-no-games": "ℹ️ Geen games met prijs gevonden in verlanglijst.",
+      "auto-sync-wishlist": "Verlanglijst automatisch synchroniseren bij elk interval",
+      "auto-sync-note": "ℹ️ Wanneer ingeschakeld, worden nieuwe games uit je Steam-verlanglijst automatisch toegevoegd. Handmatige games worden nooit verwijderd."
+    },
+    "open-settings": "Instellingen Openen"
   }
 }

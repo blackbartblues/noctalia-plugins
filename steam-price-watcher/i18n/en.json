@@ -61,7 +61,10 @@
       "import-failed": "❌ Import failed. Check if Steam ID is correct and profile is public.",
       "import-all-exist": "ℹ️ All wishlist games are already in your list.",
       "import-success": "✅ Import complete! {count} games added.",
-      "import-no-games": "ℹ️ No games with price found in wishlist."
-    }
+      "import-no-games": "ℹ️ No games with price found in wishlist.",
+      "auto-sync-wishlist": "Automatically sync wishlist every check interval",
+      "auto-sync-note": "ℹ️ When enabled, new games from your Steam wishlist will be automatically added. Manual games will never be removed."
+    },
+    "open-settings": "Open Settings"
   }
 }

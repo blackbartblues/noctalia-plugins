@@ -21,6 +21,8 @@ ColumnLayout {
   property int checkInterval: cfg.checkInterval ?? defaults.checkInterval ?? 30
   property string currency: cfg.currency || defaults.currency || "br"
   property string currencySymbol: cfg.currencySymbol || defaults.currencySymbol || "R$"
+  property string steamId: cfg.steamId || defaults.steamId || ""
+  property bool autoSyncWishlist: cfg.autoSyncWishlist ?? defaults.autoSyncWishlist ?? false
 
   // Search state
   property var searchResults: []
@@ -222,7 +224,7 @@ ColumnLayout {
       spacing: Style.marginS
 
       NText {
-        text: pluginApi?.tr("steam-price-watcher.settings.import-wishlist") || "Importar Wishlist do Steam"
+        text: pluginApi?.tr("steam-price-watcher.settings.import-wishlist") || "Import Steam Wishlist"
         pointSize: Style.fontSizeL
         font.weight: Style.fontWeightBold
         color: Color.mOnSurface
@@ -230,7 +232,7 @@ ColumnLayout {
 
       NText {
         text: pluginApi?.tr("steam-price-watcher.settings.import-description") ||
-          "Importe sua wishlist diretamente do Steam. Insira seu Steam ID ou nome de usuário personalizado."
+          "Import your wishlist directly from Steam. Enter your Steam ID or custom username."
         color: Color.mOnSurfaceVariant
         pointSize: Style.fontSizeS
         Layout.fillWidth: true
@@ -246,11 +248,19 @@ ColumnLayout {
           Layout.fillWidth: true
           Layout.preferredHeight: Style.baseWidgetSize
           placeholderText: pluginApi?.tr("steam-price-watcher.settings.steam-id-placeholder") ||
-            "Ex: 76561198012345678 ou seu_username"
+            "Ex: 76561198012345678 or your_username"
+          text: root.steamId
+
+          onTextChanged: {
+            if (pluginApi && pluginApi.pluginSettings && text.trim().length > 0) {
+              pluginApi.pluginSettings.steamId = text.trim();
+              pluginApi.saveSettings();
+            }
+          }
         }
 
         NButton {
-          text: pluginApi?.tr("steam-price-watcher.settings.import") || "Importar"
+          text: pluginApi?.tr("steam-price-watcher.settings.import") || "Import"
           enabled: !parent.parent.parent.importing && steamIdInput.text.trim().length > 0
           onClicked: {
             if (steamIdInput.text.trim().length > 0) {
@@ -258,6 +268,42 @@ ColumnLayout {
             }
           }
         }
+      }
+
+      // Auto-sync toggle
+      RowLayout {
+        Layout.fillWidth: true
+        spacing: Style.marginM
+
+        NCheckBox {
+          id: autoSyncCheckbox
+          checked: root.autoSyncWishlist
+          onCheckedChanged: {
+            if (pluginApi && pluginApi.pluginSettings) {
+              pluginApi.pluginSettings.autoSyncWishlist = checked;
+              pluginApi.saveSettings();
+            }
+          }
+        }
+
+        NText {
+          text: pluginApi?.tr("steam-price-watcher.settings.auto-sync-wishlist") ||
+            "Automatically sync wishlist every check interval"
+          color: Color.mOnSurface
+          pointSize: Style.fontSizeM
+          Layout.fillWidth: true
+          wrapMode: Text.WordWrap
+        }
+      }
+
+      NText {
+        text: pluginApi?.tr("steam-price-watcher.settings.auto-sync-note") ||
+          "ℹ️ When enabled, new games from your Steam wishlist will be automatically added. Manual games will never be removed."
+        color: Color.mOnSurfaceVariant
+        pointSize: Style.fontSizeXS
+        Layout.fillWidth: true
+        wrapMode: Text.WordWrap
+        visible: autoSyncCheckbox.checked
       }
 
       // Status messages

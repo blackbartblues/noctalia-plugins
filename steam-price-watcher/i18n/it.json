@@ -61,7 +61,10 @@
       "import-failed": "❌ Importazione fallita. Verifica che lo Steam ID sia corretto e il profilo sia pubblico.",
       "import-all-exist": "ℹ️ Tutti i giochi della lista dei desideri sono già nella tua lista.",
       "import-success": "✅ Importazione completata! {count} giochi aggiunti.",
-      "import-no-games": "ℹ️ Nessun gioco con prezzo trovato nella lista dei desideri."
-    }
+      "import-no-games": "ℹ️ Nessun gioco con prezzo trovato nella lista dei desideri.",
+      "auto-sync-wishlist": "Sincronizza automaticamente la lista dei desideri ad ogni intervallo",
+      "auto-sync-note": "ℹ️ Quando attivato, i nuovi giochi dalla tua lista dei desideri Steam verranno automaticamente aggiunti. I giochi manuali non verranno mai rimossi."
+    },
+    "open-settings": "Apri Impostazioni"
   }
 }
