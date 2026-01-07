@@ -27,28 +27,35 @@ Item {
   property int totalWidth: friendsWidth + gapSize + mainWidth + gapSize + chatWidth
   property int centerOffset: (screenWidth - totalWidth) / 2
 
-  // Ensure Logger exists (fallback to console if not provided)
-  function ensureLogger() {
-    if (typeof Logger === 'undefined') {
-      Logger = {
-        d: function(m) { console.log(m); },
-        i: function(m) { if (console.info) console.info(m); else console.log(m); },
-        w: function(m) { if (console.warn) console.warn(m); else console.log("WARN: " + m); },
-        e: function(m) { if (console.error) console.error(m); else console.log("ERROR: " + m); }
-      }
-    }
+  // Logger helper functions (fallback to console if Logger not available)
+  function logDebug(msg) {
+    if (typeof Logger !== 'undefined') Logger.d(msg);
+    else console.log(msg);
+  }
+
+  function logInfo(msg) {
+    if (typeof Logger !== 'undefined') Logger.i(msg);
+    else console.log(msg);
+  }
+
+  function logWarn(msg) {
+    if (typeof Logger !== 'undefined') Logger.w(msg);
+    else console.warn(msg);
+  }
+
+  function logError(msg) {
+    if (typeof Logger !== 'undefined') Logger.e(msg);
+    else console.error(msg);
   }
 
   onPluginApiChanged: {
-    ensureLogger();
     if (pluginApi) {
-      Logger.i("SteamOverlay: " + (pluginApi?.tr("main.plugin_loaded") || "Plugin loaded"));
+      logInfo("SteamOverlay: " + (pluginApi?.tr("main.plugin_loaded") || "Plugin loaded"));
       checkSteam.running = true;
     }
   }
 
   Component.onCompleted: {
-    ensureLogger();
     if (pluginApi) {
       checkSteam.running = true;
     }
@@ -74,8 +81,7 @@ Item {
     running: false
 
     onExited: (exitCode, exitStatus) => {
-      ensureLogger();
-      Logger.i("SteamOverlay: " + (pluginApi?.tr("main.steam_launched") || "Steam launched"));
+      logInfo("SteamOverlay: " + (pluginApi?.tr("main.steam_launched") || "Steam launched"));
     }
   }
 
@@ -91,11 +97,10 @@ Item {
         if (parts.length === 2) {
           screenWidth = parseInt(parts[0]);
           screenHeight = parseInt(parts[1]);
-          ensureLogger();
           var msg = pluginApi?.tr("main.resolution_detected")
             .replace("{width}", screenWidth)
             .replace("{height}", screenHeight);
-          Logger.i("SteamOverlay: " + msg);
+          logDebug("SteamOverlay: " + msg);
         }
       }
     }
@@ -131,16 +136,17 @@ Item {
           // Accept main Steam window
           if (title === "Steam") return true;
 
-          // Accept small chat windows (typically < 600px wide)
-          if (width < 600 && height < 800) return true;
+          // Accept chat windows (< 30% screen width and < 100% screen height)
+          var maxChatWidth = screenWidth * 0.30;
+          var maxChatHeight = screenHeight * 1.0;
+          if (width < maxChatWidth && height < maxChatHeight) return true;
 
           // Reject everything else (games, large auxiliary windows, etc.)
           return false;
         });
 
-        ensureLogger();
         var msg = pluginApi?.tr("main.windows_found").replace("{count}", steamWindows.length);
-        Logger.i("SteamOverlay: " + msg);
+        logDebug("SteamOverlay: " + msg);
         lines = [];
       }
     }
@@ -153,11 +159,10 @@ Item {
     running: false
 
     onExited: (exitCode, exitStatus) => {
-      ensureLogger();
       var msg = pluginApi?.tr("main.windows_moved").replace("{code}", exitCode);
-      Logger.i("SteamOverlay: " + msg);
+      logDebug("SteamOverlay: " + msg);
       if (exitCode === 0) {
-        // Show the special workspace
+        // Show the special workspace, then focus additional windows
         showWorkspace.running = true;
       }
     }
@@ -170,8 +175,76 @@ Item {
     running: false
 
     onExited: (exitCode, exitStatus) => {
-      ensureLogger();
-      Logger.i("SteamOverlay: " + (pluginApi?.tr("main.workspace_toggled") || "Workspace toggled"));
+      logDebug("SteamOverlay: " + (pluginApi?.tr("main.workspace_toggled") || "Workspace toggled"));
+      if (exitCode === 0 && overlayActive) {
+        // After showing workspace, focus additional windows to bring them to front
+        Qt.callLater(() => {
+          focusAdditionalWindows.running = true;
+        });
+      }
+    }
+  }
+
+  // Focus additional (non-main) windows to bring them to front
+  Process {
+    id: focusAdditionalWindows
+    command: ["bash", "-c", "hyprctl clients -j | jq -r '.[] | select(.class == \"steam\" and .workspace.name == \"special:steam\" and .fullscreen == 0) | .address'"]
+    running: false
+
+    property var addresses: []
+
+    stdout: SplitParser {
+      onRead: data => {
+        var addr = data.trim();
+        if (addr && addr.startsWith("0x")) {
+          focusAdditionalWindows.addresses.push(addr);
+        }
+      }
+    }
+
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode === 0 && addresses.length > 0) {
+        var focusCommands = [];
+
+        // Focus only non-main windows
+        for (var i = 0; i < addresses.length; i++) {
+          var addr = addresses[i];
+          var isMain = false;
+
+          // Check if this is one of the 3 main windows
+          for (var j = 0; j < steamWindows.length; j++) {
+            if (steamWindows[j].address === addr) {
+              isMain = true;
+              break;
+            }
+          }
+
+          // Bring additional windows to top (without focusing/moving cursor)
+          if (!isMain) {
+            focusCommands.push("hyprctl dispatch alterzorder top,address:" + addr);
+          }
+        }
+
+        if (focusCommands.length > 0) {
+          executeFocus.command = ["bash", "-c", focusCommands.join(" && ")];
+          executeFocus.running = true;
+          logDebug("SteamOverlay: Bringing " + focusCommands.length + " additional window(s) to top");
+        }
+      }
+      addresses = [];
+    }
+  }
+
+  // Execute focus commands
+  Process {
+    id: executeFocus
+    command: ["bash", "-c", ""]
+    running: false
+
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode === 0) {
+        logDebug("SteamOverlay: Additional windows focused");
+      }
     }
   }
 
@@ -187,12 +260,78 @@ Item {
     }
   }
 
+  // Detect ALL Steam windows (including additional ones)
+  Process {
+    id: detectAllWindows
+    command: ["bash", "-c", "hyprctl clients -j | jq -c '.[] | select(.class == \"steam\" and .fullscreen == 0) | {address: .address, title: .title}'"]
+    running: false
+
+    property var allSteamWindows: []
+
+    stdout: SplitParser {
+      onRead: data => {
+        var line = data.trim();
+        if (line) {
+          try {
+            detectAllWindows.allSteamWindows.push(JSON.parse(line));
+          } catch (e) {}
+        }
+      }
+    }
+
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode === 0 && allSteamWindows.length > 0) {
+        var commands = [];
+
+        for (var i = 0; i < allSteamWindows.length; i++) {
+          var win = allSteamWindows[i];
+          var addr = win.address;
+          var title = win.title || "";
+
+          // Skip notification toasts
+          if (title.includes("notificationtoasts")) {
+            continue;
+          }
+
+          // Move all Steam windows to overlay and set as floating
+          commands.push("hyprctl dispatch movetoworkspacesilent special:steam,address:" + addr);
+          commands.push("hyprctl dispatch setfloating address:" + addr);
+        }
+
+        if (commands.length > 0) {
+          moveAllWindows.command = ["bash", "-c", commands.join(" && ")];
+          moveAllWindows.running = true;
+        }
+      }
+      allSteamWindows = [];
+    }
+  }
+
+  // Execute move all windows commands
+  Process {
+    id: moveAllWindows
+    command: ["bash", "-c", ""]
+    running: false
+
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode === 0) {
+        logDebug("SteamOverlay: All Steam windows moved to overlay and set as floating");
+        // After moving all windows, position the main 3 and show workspace
+        Qt.callLater(() => {
+          if (steamWindows.length > 0) {
+            moveWindowsToOverlay();
+          }
+        });
+      }
+    }
+  }
+
+
   function toggleOverlay() {
-    ensureLogger();
-    Logger.i("SteamOverlay: " + (pluginApi?.tr("main.toggle_called") || "Toggle called"));
+    logDebug("SteamOverlay: " + (pluginApi?.tr("main.toggle_called") || "Toggle called"));
 
     if (!steamRunning) {
-      Logger.i("SteamOverlay: " + (pluginApi?.tr("main.launching_steam") || "Launching Steam"));
+      logInfo("SteamOverlay: " + (pluginApi?.tr("main.launching_steam") || "Launching Steam"));
       launchSteam.running = true;
       return;
     }
@@ -202,16 +341,16 @@ Item {
       showWorkspace.running = true;
       overlayActive = false;
     } else {
-      // Show overlay - detect and move windows
+      // Show overlay - detect main windows first, then all windows
       detectWindows.running = true;
 
-      // Wait for detection to complete, then move windows
+      // Wait for main windows detection, then detect all windows
       Qt.callLater(() => {
-        ensureLogger();
         if (steamWindows.length > 0) {
-          moveWindowsToOverlay();
+          // Now detect and move ALL Steam windows
+          detectAllWindows.running = true;
         } else {
-          Logger.w("SteamOverlay: " + (pluginApi?.tr("main.no_windows_found") || "No Steam windows found"));
+          logWarn("SteamOverlay: " + (pluginApi?.tr("main.no_windows_found") || "No Steam windows found"));
         }
       });
 
@@ -226,9 +365,6 @@ Item {
       var win = steamWindows[i];
       var addr = win.address;
       var title = win.title;
-
-      // Move to special workspace
-      commands.push("hyprctl dispatch movetoworkspacesilent special:steam,address:" + addr);
 
       // Position based on title with percentage layout + center offset
       var x = 0, y = topMargin, w = 800, h = windowHeight;
@@ -247,8 +383,7 @@ Item {
         w = chatWidth;
       }
 
-      // Set floating first, then position and size
-      commands.push("hyprctl dispatch setfloating address:" + addr);
+      // Position and size the 3 main windows (they are already floating and in overlay)
       commands.push("hyprctl dispatch resizewindowpixel exact " + w + " " + h + ",address:" + addr);
       commands.push("hyprctl dispatch movewindowpixel exact " + x + " " + y + ",address:" + addr);
     }
@@ -264,8 +399,7 @@ Item {
     target: "plugin:hyprland-steam-overlay"
 
     function toggle() {
-      ensureLogger();
-      Logger.i("SteamOverlay: " + (pluginApi?.tr("main.ipc_received") || "IPC toggle received"));
+      logDebug("SteamOverlay: " + (pluginApi?.tr("main.ipc_received") || "IPC toggle received"));
       root.toggleOverlay();
     }
   }
