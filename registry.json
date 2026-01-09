@@ -77,6 +77,21 @@
       "lastUpdated": "2026-01-07T08:58:45-05:00"
     },
     {
+      "id": "kagi-quick-search",
+      "name": "Kagi Quick Search",
+      "version": "1.0.0",
+      "author": "Kainoa Kanter",
+      "description": "Get AI answers from Kagi in your launcher",
+      "repository": "https://github.com/noctalia-dev/noctalia-plugins",
+      "minNoctaliaVersion": "3.8.3",
+      "license": "MIT",
+      "tags": [
+        "Launcher",
+        "Productivity"
+      ],
+      "lastUpdated": "2026-01-08T18:22:34-08:00"
+    },
+    {
       "id": "kaomoji-provider",
       "name": "Kaomoji Provider",
       "version": "1.0.2",
