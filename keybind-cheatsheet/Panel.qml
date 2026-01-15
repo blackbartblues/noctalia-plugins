@@ -828,13 +828,16 @@ Item {
 
   function distributeCategories() {
     var numCols = root.columnCount;
-    var weights = [];
-    var totalWeight = 0;
+
+    // Calculate weights for each category
+    var catData = [];
     for (var i = 0; i < categories.length; i++) {
-      var weight = 1 + categories[i].binds.length + 1;
-      weights.push(weight);
-      totalWeight += weight;
+      var weight = 1 + categories[i].binds.length + 1; // header + binds + spacer
+      catData.push({ index: i, weight: weight });
     }
+
+    // Sort by weight descending (largest categories first for better distribution)
+    catData.sort(function(a, b) { return b.weight - a.weight; });
 
     var columns = [];
     var columnWeights = [];
@@ -843,15 +846,21 @@ Item {
       columnWeights.push(0);
     }
 
-    for (var i = 0; i < categories.length; i++) {
+    // Assign each category to the column with smallest current weight
+    for (var i = 0; i < catData.length; i++) {
       var minCol = 0;
       for (var c = 1; c < numCols; c++) {
         if (columnWeights[c] < columnWeights[minCol]) {
           minCol = c;
         }
       }
-      columns[minCol].push(i);
-      columnWeights[minCol] += weights[i];
+      columns[minCol].push(catData[i].index);
+      columnWeights[minCol] += catData[i].weight;
+    }
+
+    // Sort categories within each column by original order for consistent display
+    for (var c = 0; c < numCols; c++) {
+      columns[c].sort(function(a, b) { return a - b; });
     }
 
     return columns;
