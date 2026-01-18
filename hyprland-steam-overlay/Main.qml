@@ -19,6 +19,7 @@ Item {
   readonly property var defaults: pluginApi?.manifest?.metadata?.defaultSettings || ({})
 
   // User-configurable settings with fallback chain
+  readonly property bool enableChatNotifications: cfg.enableChatNotifications ?? defaults.enableChatNotifications ?? true
   readonly property int gapSize: cfg.gapSize ?? defaults.gapSize ?? 10
   readonly property real topMarginPercent: cfg.topMarginPercent ?? defaults.topMarginPercent ?? 2.5
   readonly property real windowHeightPercent: cfg.windowHeightPercent ?? defaults.windowHeightPercent ?? 95
@@ -37,30 +38,8 @@ Item {
   readonly property int totalWidth: friendsWidth + gapSize + mainWidth + gapSize + chatWidth
   readonly property int centerOffset: Math.round((screenWidth - totalWidth) / 2)
 
-  // Logger helper functions (fallback to console if Logger not available)
-  function logDebug(msg) {
-    if (typeof Logger !== 'undefined') Logger.d(msg);
-    else console.log(msg);
-  }
-
-  function logInfo(msg) {
-    if (typeof Logger !== 'undefined') Logger.i(msg);
-    else console.log(msg);
-  }
-
-  function logWarn(msg) {
-    if (typeof Logger !== 'undefined') Logger.w(msg);
-    else console.warn(msg);
-  }
-
-  function logError(msg) {
-    if (typeof Logger !== 'undefined') Logger.e(msg);
-    else console.error(msg);
-  }
-
   onPluginApiChanged: {
     if (pluginApi) {
-      logInfo("SteamOverlay: " + (pluginApi?.tr("main.plugin_loaded") || "Plugin loaded"));
       checkSteam.running = true;
     }
   }
@@ -89,10 +68,6 @@ Item {
     id: launchSteam
     command: ["steam", "steam://open/main"]
     running: false
-
-    onExited: (exitCode, exitStatus) => {
-      logInfo("SteamOverlay: " + (pluginApi?.tr("main.steam_launched") || "Steam launched"));
-    }
   }
 
   // Detect screen resolution
@@ -107,10 +82,6 @@ Item {
         if (parts.length === 2) {
           screenWidth = parseInt(parts[0]);
           screenHeight = parseInt(parts[1]);
-          var msg = pluginApi?.tr("main.resolution_detected")
-            .replace("{width}", screenWidth)
-            .replace("{height}", screenHeight);
-          logDebug("SteamOverlay: " + msg);
         }
       }
     }
@@ -155,8 +126,6 @@ Item {
           return false;
         });
 
-        var msg = pluginApi?.tr("main.windows_found").replace("{count}", steamWindows.length);
-        logDebug("SteamOverlay: " + msg);
         lines = [];
       }
     }
@@ -169,29 +138,36 @@ Item {
     running: false
 
     onExited: (exitCode, exitStatus) => {
-      var msg = pluginApi?.tr("main.windows_moved").replace("{code}", exitCode);
-      logDebug("SteamOverlay: " + msg);
       if (exitCode === 0) {
-        // Show the special workspace, then focus additional windows
         showWorkspace.running = true;
       }
     }
   }
 
-  // Show special workspace
+  // Show special workspace (only when opening overlay)
   Process {
     id: showWorkspace
     command: ["hyprctl", "dispatch", "togglespecialworkspace", "steam"]
     running: false
 
     onExited: (exitCode, exitStatus) => {
-      logDebug("SteamOverlay: " + (pluginApi?.tr("main.workspace_toggled") || "Workspace toggled"));
-      if (exitCode === 0 && overlayActive) {
-        // After showing workspace, focus additional windows to bring them to front
+      if (exitCode === 0) {
+        overlayActive = true;
         Qt.callLater(() => {
           focusAdditionalWindows.running = true;
         });
       }
+    }
+  }
+
+  // Hide special workspace (only when closing overlay)
+  Process {
+    id: hideWorkspace
+    command: ["hyprctl", "dispatch", "togglespecialworkspace", "steam"]
+    running: false
+
+    onExited: (exitCode, exitStatus) => {
+      overlayActive = false;
     }
   }
 
@@ -238,7 +214,6 @@ Item {
         if (focusCommands.length > 0) {
           executeFocus.command = ["bash", "-c", focusCommands.join(" && ")];
           executeFocus.running = true;
-          logDebug("SteamOverlay: Bringing " + focusCommands.length + " additional window(s) to top");
         }
       }
       addresses = [];
@@ -250,12 +225,6 @@ Item {
     id: executeFocus
     command: ["bash", "-c", ""]
     running: false
-
-    onExited: (exitCode, exitStatus) => {
-      if (exitCode === 0) {
-        logDebug("SteamOverlay: Additional windows focused");
-      }
-    }
   }
 
   // Timer to monitor Steam
@@ -267,6 +236,120 @@ Item {
 
     onTriggered: {
       checkSteam.running = true;
+    }
+  }
+
+  // Timer to monitor for NEW Steam windows while overlay is active
+  Timer {
+    id: newWindowMonitor
+    interval: 150
+    repeat: true
+    running: overlayActive
+
+    onTriggered: {
+      if (!detectNewWindows.running) {
+        detectNewWindows.windowData = [];
+        detectNewWindows.running = true;
+      }
+    }
+  }
+
+  // Process to detect new Steam windows that appeared after overlay was opened
+  Process {
+    id: detectNewWindows
+    command: ["bash", "-c", "hyprctl clients -j | jq -c '.[] | select(.class == \"steam\" and .fullscreen == 0 and (.title | startswith(\"notificationtoasts\") | not)) | {address: .address, workspace: .workspace.name}'"]
+    running: false
+
+    property var windowData: []
+
+    stdout: SplitParser {
+      onRead: data => {
+        var line = data.trim();
+        if (line) {
+          try {
+            detectNewWindows.windowData.push(JSON.parse(line));
+          } catch (e) {}
+        }
+      }
+    }
+
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode === 0 && windowData.length > 0) {
+        var windowsToMove = [];
+
+        for (var i = 0; i < windowData.length; i++) {
+          var win = windowData[i];
+          var addr = win.address;
+          var workspace = win.workspace || "";
+
+          // Move ANY Steam window that is not in special:steam
+          if (workspace !== "special:steam") {
+            windowsToMove.push(addr);
+          }
+        }
+
+        // Move windows to overlay and bring to top
+        if (windowsToMove.length > 0) {
+          var commands = [];
+          for (var j = 0; j < windowsToMove.length; j++) {
+            var addr = windowsToMove[j];
+            commands.push("hyprctl dispatch movetoworkspacesilent special:steam,address:" + addr);
+            commands.push("hyprctl dispatch setfloating address:" + addr);
+            commands.push("hyprctl dispatch alterzorder top,address:" + addr);
+          }
+          moveNewWindows.command = ["bash", "-c", commands.join(" && ")];
+          if (!moveNewWindows.running) {
+            moveNewWindows.running = true;
+          }
+        }
+      }
+    }
+  }
+
+  // Execute move commands for new windows
+  Process {
+    id: moveNewWindows
+    command: ["bash", "-c", ""]
+    running: false
+  }
+
+  // Timer to poll for Steam notification toasts (fast polling to catch brief toasts)
+  Timer {
+    id: chatNotificationTimer
+    interval: 500
+    repeat: true
+    running: enableChatNotifications && steamRunning && !overlayActive && !(pluginApi?.pluginSettings?.hasNewMessages)
+
+    onTriggered: {
+      checkNotificationToast.running = true;
+    }
+  }
+
+  // Process to detect Steam notification toast window
+  Process {
+    id: checkNotificationToast
+    command: ["bash", "-c", "hyprctl clients -j | jq -r '.[] | select(.class == \"steam\" and (.title | startswith(\"notificationtoasts\"))) | .title' | head -1"]
+    running: false
+
+    property string foundToast: ""
+
+    stdout: SplitParser {
+      onRead: data => {
+        var line = data.trim();
+        if (line.length > 0) {
+          checkNotificationToast.foundToast = line;
+        }
+      }
+    }
+
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode === 0 && foundToast.length > 0) {
+        if (pluginApi && pluginApi.pluginSettings && !pluginApi.pluginSettings.hasNewMessages) {
+          pluginApi.pluginSettings.hasNewMessages = true;
+          pluginApi.saveSettings();
+        }
+      }
+      foundToast = "";
     }
   }
 
@@ -325,8 +408,6 @@ Item {
 
     onExited: (exitCode, exitStatus) => {
       if (exitCode === 0) {
-        logDebug("SteamOverlay: All Steam windows moved to overlay and set as floating");
-        // After moving all windows, position the main 3 and show workspace
         Qt.callLater(() => {
           if (steamWindows.length > 0) {
             moveWindowsToOverlay();
@@ -338,19 +419,20 @@ Item {
 
 
   function toggleOverlay() {
-    logDebug("SteamOverlay: " + (pluginApi?.tr("main.toggle_called") || "Toggle called"));
-
     if (!steamRunning) {
-      logInfo("SteamOverlay: " + (pluginApi?.tr("main.launching_steam") || "Launching Steam"));
       launchSteam.running = true;
       return;
     }
 
     if (overlayActive) {
-      // Hide overlay
-      showWorkspace.running = true;
-      overlayActive = false;
+      hideWorkspace.running = true;
     } else {
+      // Clear new messages indicator when opening overlay
+      if (pluginApi && pluginApi.pluginSettings && pluginApi.pluginSettings.hasNewMessages) {
+        pluginApi.pluginSettings.hasNewMessages = false;
+        pluginApi.saveSettings();
+      }
+
       // Show overlay - detect main windows first, then all windows
       detectWindows.running = true;
 
@@ -359,12 +441,8 @@ Item {
         if (steamWindows.length > 0) {
           // Now detect and move ALL Steam windows
           detectAllWindows.running = true;
-        } else {
-          logWarn("SteamOverlay: " + (pluginApi?.tr("main.no_windows_found") || "No Steam windows found"));
         }
       });
-
-      overlayActive = true;
     }
   }
 
@@ -409,7 +487,6 @@ Item {
     target: "plugin:hyprland-steam-overlay"
 
     function toggle() {
-      logDebug("SteamOverlay: " + (pluginApi?.tr("main.ipc_received") || "IPC toggle received"));
       root.toggleOverlay();
     }
   }
