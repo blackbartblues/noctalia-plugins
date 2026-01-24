@@ -1,8 +1,6 @@
 # Steam Overlay for Noctalia
 
-Steam overlay plugin for Noctalia with automatic window management using Hyprland special workspace.
-
-Automatically moves all Steam windows (except fullscreen games) to overlay workspace as floating windows. Main 3 windows (Friends, Client, Chat) are positioned in a row. Additional windows are brought to top. If new windows don't appear on top, toggle overlay off/on (Super+S twice). Fully responsive with percentage-based layout. Requires Hyprland window manager
+Steam overlay plugin for Noctalia/Quickshell with automatic window management using Hyprland special workspace.
 
 ## Features
 
@@ -21,9 +19,9 @@ Automatically moves all Steam windows (except fullscreen games) to overlay works
 cp -r steam-overlay ~/.config/noctalia/plugins/
 ```
 
-2. Restart noctalia:
+2. Restart Quickshell:
 ```bash
-pkill -f "qs" && qs -c noctalia-shell &
+pkill -f "qs.*noctalia" && qs -c noctalia-shell &
 ```
 
 ## Usage
@@ -34,12 +32,12 @@ Click the gamepad icon in your top bar to toggle the Steam overlay.
 ### Via Keyboard Shortcut
 Add to your Hyprland config (`~/.config/hypr/hyprland.conf`):
 ```
-bind = SUPER, G, exec, qs ipc -c noctalia-shell call plugin:steam-overlay toggle
+bind = SUPER, G, exec, qs -c noctalia-shell ipc call plugin:steam-overlay toggle
 ```
 
 ### Via IPC Command
 ```bash
-qs ipc -c noctalia-shell call plugin:steam-overlay toggle
+qs -c noctalia-shell ipc call plugin:steam-overlay toggle
 ```
 
 ## How It Works
@@ -73,7 +71,7 @@ Default settings in `settings.json`:
 
 ## Requirements
 
-- Noctalia 3.6.0+
+- Noctalia/Quickshell 3.6.0+
 - Hyprland compositor
 - Steam
 - `jq` for JSON parsing
@@ -86,6 +84,10 @@ Default settings in `settings.json`:
 - `Panel.qml` - Overlay panel (optional)
 - `manifest.json` - Plugin metadata
 - `settings.json` - Plugin settings
+
+## Author
+
+Created with ❤️ using Claude Code
 
 ## License
 
