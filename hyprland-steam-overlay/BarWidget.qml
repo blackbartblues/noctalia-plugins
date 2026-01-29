@@ -1,11 +1,11 @@
 import QtQuick
-import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import qs.Services.UI
 import qs.Widgets
 
-Rectangle {
+NIconButton {
   id: root
 
   property var pluginApi: null
@@ -13,16 +13,18 @@ Rectangle {
   property string widgetId: ""
   property string section: ""
 
-  implicitWidth: barIsVertical ? Style.capsuleHeight : contentRow.implicitWidth + Style.marginM * 2
-  implicitHeight: Style.capsuleHeight
-
   property bool steamRunning: false
 
-  readonly property string barPosition: Settings.data.bar.position || "top"
-  readonly property bool barIsVertical: barPosition === "left" || barPosition === "right"
+  baseSize: Style.getCapsuleHeightForScreen(screen.name)
+  applyUiScale: false
+  icon: "brand-steam"
+  tooltipText: steamRunning ? "Steam Running - Toggle Overlay" : "Steam Stopped"
+  tooltipDirection: BarService.getTooltipDirection()
 
-  color: Style.capsuleColor
-  radius: Style.radiusL
+  colorBg: Style.capsuleColor
+  colorFg: Color.mOnSurface
+  colorBorder: "transparent"
+  colorBorderHover: "transparent"
 
   // Process to check Steam status
   Process {
@@ -56,37 +58,16 @@ Rectangle {
     checkSteamProcess.running = true;
   }
 
-  RowLayout {
-    id: contentRow
-    anchors.centerIn: parent
-    spacing: Style.marginS
-
-    NIcon {
-      icon: "brand-steam"
-      pointSize: Style.fontSizeL
-      color: mouseArea.containsMouse ? Color.mOnHover : Color.mOnSurface
+  onClicked: {
+    if (pluginApi) {
+      Logger.i("SteamOverlay.BarWidget", "Calling Steam overlay toggle");
+      ipcProcess.running = true;
     }
   }
 
-  MouseArea {
-    id: mouseArea
-    anchors.fill: parent
-    hoverEnabled: true
-    cursorShape: Qt.PointingHandCursor
-
-    onEntered: {
-      root.color = Color.mHover;
-    }
-
-    onExited: {
-      root.color = Style.capsuleColor;
-    }
-
-    onClicked: {
-      if (pluginApi) {
-        Logger.i("SteamOverlay.BarWidget: Calling Steam overlay toggle");
-        ipcProcess.running = true;
-      }
+  onRightClicked: {
+    if (pluginApi) {
+      pluginApi.openPanel(screen);
     }
   }
 }
