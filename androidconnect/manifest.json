@@ -4,9 +4,8 @@
   "version": "1.2.2",
   "minNoctaliaVersion": "4.4.0",
   "author": "demencia89",
-  "official": false,
   "license": "GPLv2",
-  "repository": "https://github.com/demencia89/noctalia-shell-androidconnect-plugin",
+  "repository": "https://github.com/noctalia-dev/noctalia-plugins",
   "description": "A Noctalia Android device plugin built on top of the original KDE Connect plugin, with embedded scrcpy support.",
   "tags": [
     "Bar",
