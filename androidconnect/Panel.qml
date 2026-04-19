@@ -22,22 +22,42 @@ Item {
   readonly property bool panelAnchorTop: true
   readonly property bool panelAnchorRight: true
 
-  property real contentPreferredWidth: {
-    if (phoneSizePresetIndex === 0)
-      return 560 * Style.uiScaleRatio;
-    if (phoneSizePresetIndex === 1)
-      return 620 * Style.uiScaleRatio;
-    return 680 * Style.uiScaleRatio;
-  }
+  property real contentPreferredWidth: phoneSizeValue(560, 620, 680) * Style.uiScaleRatio
   property real contentPreferredHeight: deviceData.implicitHeight + (Style.marginM * 2)
 
   readonly property bool allowAttach: true
   readonly property color panelBackgroundColor: Color.mSurface
+  readonly property color shellPrimaryTextColor: Color.mOnSurface
+  readonly property color shellSecondaryTextColor: Color.mOnSurfaceVariant
+  readonly property color shellPrimaryIconColor: Color.mPrimary
+  readonly property color shellButtonBgColor: Color.mSurfaceVariant
+  readonly property color shellButtonFgColor: Color.mPrimary
+  readonly property color shellButtonBgHoverColor: Color.mHover
+  readonly property color shellButtonFgHoverColor: Color.mOnHover
+  readonly property color shellButtonBorderColor: Style.boxBorderColor
+  readonly property color shellButtonBorderHoverColor: Color.mOutline
+  readonly property color shellButtonActiveBgColor: Color.mPrimary
+  readonly property color shellButtonActiveFgColor: Color.mOnPrimary
+  readonly property color shellButtonActiveBorderColor: Color.mPrimary
+  readonly property color shellIconChipColor: Qt.alpha(Color.mPrimaryContainer, 0.8)
+  readonly property color shellIconChipBorderColor: Qt.alpha(Color.mPrimary, 0.42)
+  readonly property color shellIconChipFgColor: Color.mOnPrimaryContainer
+  readonly property color shellStageColor: Qt.alpha(Color.mSurface, 0.94)
+  readonly property color shellCardColor: Qt.alpha(Color.mSurfaceVariant, 0.84)
+  readonly property color shellCardBorderColor: Style.boxBorderColor
+  readonly property color shellNestedCardColor: Qt.alpha(Color.mSurface, 0.9)
+  readonly property color shellNestedCardBorderColor: Qt.alpha(Color.mOutline, 0.56)
+  readonly property color shellAccentCardColor: Qt.alpha(Color.mPrimaryContainer, 0.88)
+  readonly property color shellAccentCardBorderColor: Qt.alpha(Color.mPrimary, 0.42)
+  readonly property color shellAccentIconColor: Color.mOnPrimaryContainer
+  readonly property color shellAccentTextColor: Color.mOnPrimaryContainer
+  readonly property url androidBrandBadgeSource: Qt.resolvedUrl("./Assets/brand-badges/android.svg")
+  readonly property url googleBrandBadgeSource: Qt.resolvedUrl("./Assets/brand-badges/google.svg")
+  readonly property url xiaomiBrandBadgeSource: Qt.resolvedUrl("./Assets/brand-badges/xiaomi.svg")
   readonly property bool blurEnabled: true
-  readonly property string embeddedMirrorCommand: "scrcpy --no-audio --capture-orientation=@0"
+  readonly property string embeddedMirrorCommand: "scrcpy --no-audio --capture-orientation=@0 --max-size=960 --max-fps=60 --video-bit-rate=12M --video-codec=h264 --v4l2-buffer=0"
   readonly property bool reduceBackgroundRefreshWhileMirroring: true
   readonly property string embeddedVideoDevice: "/dev/video10"
-  readonly property string embeddedVideoLabel: "scrcpy-panel"
   property string wirelessAdbPairHost: cfg.wirelessAdbPairHost ?? defaults.wirelessAdbPairHost ?? ""
   property string wirelessAdbPairPort: cfg.wirelessAdbPairPort ?? defaults.wirelessAdbPairPort ?? ""
   property string wirelessAdbPairingCode: ""
@@ -53,22 +73,14 @@ Item {
   property var cachedDeviceTelemetry: initialCachedDeviceTelemetry()
   readonly property string tempInstanceToken: makeTempInstanceToken()
   readonly property string wirelessAdbQrImagePath: "/tmp/androidconnect-wireless-adb-" + tempInstanceToken + ".png"
-  readonly property string embeddedMirrorLoopbackSetupCommand: "sudo modprobe v4l2loopback video_nr=10 card_label=scrcpy-panel exclusive_caps=1"
+  readonly property string embeddedMirrorLoopbackSetupCommand: "sudo modprobe -r v4l2loopback 2>/dev/null || true\nsudo modprobe v4l2loopback devices=1 video_nr=10 card_label=scrcpy-panel exclusive_caps=0 max_width=960 max_height=2160"
   readonly property real phoneBaseHeight: 732 * Style.uiScaleRatio
   readonly property real phoneBaseWidth: phoneBaseHeight * (597 / 1241)
   property int phoneSizePresetIndex: initialPhoneSizePresetIndex()
-  readonly property real phoneSizeFactor: phoneSizePresetIndex === 0
-    ? 0.60
-    : (phoneSizePresetIndex === 1 ? 0.75 : 1.0)
-  readonly property int phoneSizePercent: phoneSizePresetIndex === 0
-    ? 60
-    : (phoneSizePresetIndex === 1 ? 75 : 100)
-  readonly property string phoneSizeLabel: phoneSizePresetIndex === 0
-    ? "Small"
-    : (phoneSizePresetIndex === 1 ? "Med" : "Large")
-  readonly property real navButtonScaleFactor: phoneSizePresetIndex === 0
-    ? 0.82
-    : (phoneSizePresetIndex === 1 ? 0.91 : 1.0)
+  readonly property real phoneSizeFactor: phoneSizeValue(0.60, 0.75, 1.0)
+  readonly property int phoneSizePercent: phoneSizeValue(60, 75, 100)
+  readonly property string phoneSizeLabel: phoneSizeValue("Small", "Med", "Large")
+  readonly property real navButtonScaleFactor: phoneSizeValue(0.82, 0.91, 1.0)
   readonly property var panelResizeBezierCurve: [0.05, 0, 0.133, 0.06, 0.166, 0.4, 0.208, 0.82, 0.25, 1, 1, 1]
   property bool phoneSizeAnimationEnabled: false
   property int phoneSizeStepDirection: initialPhoneSizeStepDirection()
@@ -78,21 +90,27 @@ Item {
   property bool embeddedVideoDeviceAccessible: false
   property bool embeddedVideoDeviceCheckKnown: false
   property double embeddedVideoDeviceLastCheckAtMs: 0
-  readonly property bool embeddedMirrorDiagnosticsEnabled: false
   property bool embeddedMirrorAudioEnabled: Boolean(
     cfg.embeddedMirrorAudioEnabled
     ?? defaults.embeddedMirrorAudioEnabled
     ?? false
   )
-  property bool embeddedMirrorPendingSessionRecovery: false
-  property var embeddedMirrorRecoveryPreview: null
-  property string embeddedMirrorRecoveryReason: ""
-  property bool embeddedMirrorUsbRestoreRecoveryPending: false
   property double panelVisibleSinceMs: 0
   property bool panelStatusGraceElapsed: true
   property bool panelOpenUnlockPending: false
   property int panelOpenUnlockRetriesRemaining: 0
   readonly property int panelStatusGraceMs: 5000
+  property bool keepScreenOnPending: false
+  property bool keepScreenOnEnabled: false
+  property string keepScreenOnSerial: ""
+  property string keepScreenOnOriginalTimeout: ""
+  readonly property int keepScreenOnTimeoutMs: 2147483647
+  property bool dimScreenPending: false
+  property bool dimScreenEnabled: false
+  property string dimScreenSerial: ""
+  property string dimScreenOriginalBrightness: ""
+  property string dimScreenOriginalMode: ""
+  readonly property int dimScreenBrightnessValue: 0
 
   anchors.fill: parent
 
@@ -107,22 +125,8 @@ Item {
   }
 
   Timer {
-    id: embeddedMirrorRecoveryTimer
-    interval: 220
-    repeat: false
-    onTriggered: {
-      const preview = root.embeddedMirrorRecoveryPreview || root.activePhonePreview;
-      root.embeddedMirrorPendingSessionRecovery = false;
-      root.embeddedMirrorRecoveryPreview = null;
-      Qt.callLater(function() {
-        root.ensureEmbeddedMirrorSession(preview);
-      });
-    }
-  }
-
-  Timer {
     id: embeddedMirrorAutoStartTimer
-    interval: 180
+    interval: 60
     repeat: false
     onTriggered: {
       root.attemptEmbeddedMirrorAutoStart();
@@ -130,21 +134,18 @@ Item {
   }
 
   Timer {
-    id: embeddedMirrorUsbRestoreTimer
-    interval: 420
+    id: embeddedMirrorFormatLockTimer
+    interval: 100
     repeat: false
     onTriggered: {
-      root.embeddedMirrorUsbRestoreRecoveryPending = false;
-
-      if (!root.visible || !root.embeddedMirrorModeEnabled())
-        return;
-
-      if (root.embeddedMirrorFeedSessionDegraded(root.activePhonePreview, 0)) {
-        root.requestEmbeddedMirrorSessionRecovery(root.activePhonePreview, "usb-restored-reset");
+      if (!root.visible
+          || !root.embeddedMirrorFeedConfigured()
+          || !KDEConnect.scrcpyRunning
+          || embeddedMirrorFormatLockProc.running) {
         return;
       }
 
-      root.scheduleEmbeddedMirrorAutoStart();
+      embeddedMirrorFormatLockProc.running = true;
     }
   }
 
@@ -154,34 +155,37 @@ Item {
     repeat: false
     onTriggered: {
       if (!root.panelOpenUnlockPending || !root.visible || !root.embeddedMirrorModeEnabled()) {
-        root.panelOpenUnlockPending = false;
-        root.panelOpenUnlockRetriesRemaining = 0;
+        root.clearPanelOpenUnlockState();
         return;
       }
 
       if (!KDEConnect.scrcpyRunning || KDEConnect.scrcpyLaunching) {
-        if (root.panelOpenUnlockRetriesRemaining > 0) {
-          root.panelOpenUnlockRetriesRemaining -= 1;
-          restart();
-        } else {
-          root.panelOpenUnlockPending = false;
-        }
+        root.retryPanelOpenUnlock();
         return;
       }
 
       if (!root.embeddedMirrorTouchActive()) {
-        root.refreshEmbeddedMirrorTouchMapping();
-        if (root.panelOpenUnlockRetriesRemaining > 0) {
-          root.panelOpenUnlockRetriesRemaining -= 1;
-          restart();
-        } else {
-          root.panelOpenUnlockPending = false;
-        }
+        root.scheduleTouchMappingRefresh();
+        root.retryPanelOpenUnlock();
         return;
       }
 
-      root.panelOpenUnlockPending = false;
-      root.panelOpenUnlockRetriesRemaining = 0;
+      const serial = root.currentMirrorAdbSerial();
+      if (serial === "") {
+        root.clearPanelOpenUnlockState();
+        return;
+      }
+
+      if (!KDEConnect.hasFreshAdbScreenState(serial)) {
+        KDEConnect.queryAdbScreenState(serial);
+        root.retryPanelOpenUnlock();
+        return;
+      }
+
+      root.clearPanelOpenUnlockState();
+      if (!KDEConnect.adbUnlockNeeded)
+        return;
+
       root.sendAndroidUnlockOnly();
     }
   }
@@ -217,14 +221,10 @@ Item {
   }
 
   onEmbeddedVideoDeviceChanged: {
-    embeddedVideoDeviceCheckKnown = false;
-    embeddedVideoDeviceAccessible = false;
+    resetEmbeddedVideoDeviceAccess(false);
     Qt.callLater(function() {
       root.refreshEmbeddedVideoDeviceAccess();
     });
-  }
-
-  onPhoneSizePresetIndexChanged: {
   }
 
   Connections {
@@ -232,37 +232,28 @@ Item {
 
     function onScrcpyRunningChanged() {
       root.syncBackgroundRefreshPolicy();
-      if (!KDEConnect.scrcpyRunning) {
-        if (root.embeddedMirrorPendingSessionRecovery
-            && root.visible
-            && root.embeddedMirrorModeEnabled()
-            && root.activePhonePreview) {
-          const preview = root.activePhonePreview;
-          root.embeddedMirrorRecoveryPreview = preview;
-          if (preview.reloadMediaDevices)
-            preview.reloadMediaDevices();
-          embeddedMirrorRecoveryTimer.restart();
-        }
-        return;
-      }
-
-      if (root.visible && root.panelOpenUnlockPending)
+      if (root.visible && root.panelOpenUnlockPending && KDEConnect.scrcpyRunning)
         panelOpenUnlockTimer.restart();
 
+      if (root.visible && root.panelOpenUnlockPending && KDEConnect.scrcpyRunning)
+        root.refreshPanelOpenUnlockState();
+
       if (root.embeddedMirrorModeEnabled() && KDEConnect.scrcpyRunning && root.activePhonePreview) {
-        root.embeddedMirrorRecoveryReason = "";
-        Qt.callLater(function() {
-          root.refreshEmbeddedMirrorTouchMapping();
-        });
+        root.scheduleTouchMappingRefresh();
       }
+
+      if (root.visible && KDEConnect.scrcpyRunning)
+        embeddedMirrorFormatLockTimer.restart();
+
+      if (root.visible && !KDEConnect.scrcpyRunning && !KDEConnect.scrcpyLaunching)
+        root.scheduleEmbeddedMirrorAutoStart();
     }
 
     function onAdbDevicesRefreshed() {
       const usbTransportLost = root.lastKnownUsbTransport && !KDEConnect.adbHasUsbTransport;
-      const usbTransportRestored = !root.lastKnownUsbTransport && KDEConnect.adbHasUsbTransport;
       root.lastKnownUsbTransport = KDEConnect.adbHasUsbTransport;
 
-      if (usbTransportRestored)
+      if (KDEConnect.adbHasUsbTransport)
         root.wirelessAdbSessionPreferred = false;
 
       if (usbTransportLost
@@ -274,17 +265,11 @@ Item {
       }
 
       if (root.embeddedMirrorModeEnabled() && KDEConnect.scrcpyRunning) {
-        Qt.callLater(function() {
-          root.refreshEmbeddedMirrorTouchMapping();
-        });
+        root.scheduleTouchMappingRefresh();
       }
 
-      if (usbTransportRestored
-          && root.visible
-          && root.embeddedMirrorModeEnabled()) {
-        root.embeddedMirrorUsbRestoreRecoveryPending = true;
-        embeddedMirrorUsbRestoreTimer.restart();
-      }
+      if (root.visible && root.panelOpenUnlockPending && KDEConnect.scrcpyRunning)
+        root.refreshPanelOpenUnlockState();
 
       if (!KDEConnect.scrcpyRunning && !KDEConnect.scrcpyLaunching)
         root.scheduleEmbeddedMirrorAutoStart();
@@ -322,8 +307,7 @@ Item {
       if (!isFeedFailure)
         return;
 
-      root.embeddedVideoDeviceAccessible = false;
-      root.embeddedVideoDeviceCheckKnown = false;
+      root.resetEmbeddedVideoDeviceAccess(false);
       Qt.callLater(function() {
         root.refreshEmbeddedVideoDeviceAccess();
       });
@@ -341,10 +325,8 @@ Item {
               ? message
               : root.trSafe("panel.wireless-adb.success-description", "ADB over TCP/IP enabled"));
         root.wirelessAdbStatusMessage = body;
-        ToastService.showNotice(root.trSafe("panel.wireless-adb.success-title", "Wireless ADB"), body, "wifi");
-        Qt.callLater(function() {
-          root.refreshEmbeddedMirrorTouchMapping();
-        });
+        KDEConnect.showNoticeWithHistory(root.trSafe("panel.wireless-adb.success-title", "Wireless ADB"), body, "wifi");
+        root.scheduleTouchMappingRefresh();
       } else {
         const body = message === "missing_command"
           ? root.trSafe("panel.wireless-adb.missing-command-description", "Wireless ADB could not start the built-in adb tcpip helper.")
@@ -356,23 +338,61 @@ Item {
                 ? root.trSafe("panel.wireless-adb.missing-qr-parameters-description", "Generate a fresh Wireless ADB QR code and try again.")
               : message;
         root.wirelessAdbStatusMessage = body;
-        ToastService.showWarning(root.trSafe("panel.wireless-adb.error-title", "Wireless ADB"), body, 5000);
+        KDEConnect.showWarningWithHistory(root.trSafe("panel.wireless-adb.error-title", "Wireless ADB"), body, 5000);
       }
+    }
+
+    function onAdbScreenStateRefreshed(serial, unlockNeeded, interactive, lockState) {
+      if (!root.visible || !root.panelOpenUnlockPending)
+        return;
+
+      if (String(serial || "").trim() !== root.currentMirrorAdbSerial())
+        return;
+
+      panelOpenUnlockTimer.restart();
+    }
+
+    function onAdbScreenTimeoutRead(serial, value, success) {
+      if (!root.keepScreenOnPending)
+        return;
+
+      if (String(serial || "").trim() !== root.keepScreenOnSerial)
+        return;
+
+      root.keepScreenOnPending = false;
+      if (!success)
+        return;
+
+      root.keepScreenOnEnabled = true;
+      root.keepScreenOnOriginalTimeout = String(value || "").trim();
+      KDEConnect.setAdbScreenTimeout(root.keepScreenOnSerial, String(root.keepScreenOnTimeoutMs));
+    }
+
+    function onAdbScreenBrightnessRead(serial, mode, value, success) {
+      if (!root.dimScreenPending)
+        return;
+
+      if (String(serial || "").trim() !== root.dimScreenSerial)
+        return;
+
+      root.dimScreenPending = false;
+      if (!success)
+        return;
+
+      root.dimScreenEnabled = true;
+      root.dimScreenOriginalMode = String(mode || "").trim();
+      root.dimScreenOriginalBrightness = String(value || "").trim();
+      KDEConnect.setAdbScreenBrightness(root.dimScreenSerial, String(root.dimScreenBrightnessValue));
     }
   }
 
   Component.onDestruction: {
+    root.restoreDimScreenState();
+    root.restoreKeepScreenOnState();
     KDEConnect.reduceBackgroundRefresh = false;
-    embeddedMirrorUsbRestoreTimer.stop();
     embeddedMirrorAutoStartTimer.stop();
-    embeddedMirrorRecoveryTimer.stop();
     panelOpenUnlockTimer.stop();
-    root.embeddedMirrorPendingSessionRecovery = false;
-    root.embeddedMirrorRecoveryPreview = null;
-    root.embeddedMirrorRecoveryReason = "";
-    root.embeddedMirrorUsbRestoreRecoveryPending = false;
-    root.panelOpenUnlockPending = false;
-    root.panelOpenUnlockRetriesRemaining = 0;
+    root.clearPanelOpenUnlockState();
     KDEConnect.forceStopScrcpyProcesses(root.embeddedVideoDevice);
   }
 
@@ -388,24 +408,23 @@ Item {
       root.refreshEmbeddedVideoDeviceAccess();
       root.panelOpenUnlockPending = root.embeddedMirrorModeEnabled();
       root.panelOpenUnlockRetriesRemaining = 12;
+      root.refreshPanelOpenUnlockState();
       if (KDEConnect.scrcpyRunning)
         panelOpenUnlockTimer.restart();
+      if (KDEConnect.scrcpyRunning)
+        embeddedMirrorFormatLockTimer.restart();
       root.scheduleEmbeddedMirrorAutoStart();
     }
     if (!visible) {
+      root.restoreDimScreenState();
+      root.restoreKeepScreenOnState();
       root.panelVisibleSinceMs = 0;
       root.panelStatusGraceElapsed = true;
-      embeddedMirrorUsbRestoreTimer.stop();
       embeddedMirrorAutoStartTimer.stop();
-      embeddedMirrorRecoveryTimer.stop();
+      embeddedMirrorFormatLockTimer.stop();
       panelStatusGraceTimer.stop();
       panelOpenUnlockTimer.stop();
-      root.embeddedMirrorPendingSessionRecovery = false;
-      root.embeddedMirrorRecoveryPreview = null;
-      root.embeddedMirrorRecoveryReason = "";
-      root.embeddedMirrorUsbRestoreRecoveryPending = false;
-      root.panelOpenUnlockPending = false;
-      root.panelOpenUnlockRetriesRemaining = 0;
+      root.clearPanelOpenUnlockState();
     }
     if (!visible)
       KDEConnect.forceStopScrcpyProcesses(root.embeddedVideoDevice);
@@ -438,11 +457,6 @@ Item {
       return;
     }
 
-    if (root.embeddedMirrorFeedSessionDegraded(preview, 1800)) {
-      root.requestEmbeddedMirrorSessionRecovery(preview, "manual-retry");
-      return;
-    }
-
     ensureEmbeddedMirrorSession(preview);
   }
 
@@ -452,7 +466,7 @@ Item {
       return;
 
     Quickshell.execDetached(["wl-copy", trimmedText]);
-    ToastService.showNotice(
+    KDEConnect.showNoticeWithHistory(
       root.trSafe("panel.setup-required.copy-title", "AndroidConnect"),
       successMessage || root.trSafe("panel.setup-required.copy-success", "Copied to clipboard."),
       "copy"
@@ -618,6 +632,14 @@ Item {
     persistPhoneSizePreset();
   }
 
+  function phoneSizeValue(small, medium, large) {
+    if (phoneSizePresetIndex === 0)
+      return small;
+    if (phoneSizePresetIndex === 1)
+      return medium;
+    return large;
+  }
+
   function initialPhoneSizePresetIndex() {
     const explicitKey = String(cfg.phoneSizePresetKey ?? defaults.phoneSizePresetKey ?? "").trim().toLowerCase();
     if (explicitKey === "small")
@@ -636,11 +658,7 @@ Item {
   }
 
   function currentPhoneSizePresetKey() {
-    if (phoneSizePresetIndex === 0)
-      return "small";
-    if (phoneSizePresetIndex === 1)
-      return "medium";
-    return "large";
+    return phoneSizeValue("small", "medium", "large");
   }
 
   function initialPhoneSizeStepDirection() {
@@ -676,6 +694,47 @@ Item {
 
     const text = String(translated);
     return (text === "" || text.startsWith("!!")) ? fallback : text;
+  }
+
+  function deviceBrandBadge(deviceName) {
+    const brandName = String(deviceName || "").trim().toLowerCase();
+    const isApple = brandName.indexOf("iphone") !== -1
+      || brandName.indexOf("ipad") !== -1
+      || brandName.indexOf("apple") !== -1;
+    const isGoogle = brandName.indexOf("pixel") !== -1
+      || brandName.indexOf("google") !== -1;
+    const isXiaomiFamily = brandName.indexOf("xiaomi") !== -1
+      || brandName.indexOf("redmi") !== -1
+      || brandName.indexOf("poco") !== -1;
+    const fallbackIcon = isApple
+      ? "brand-apple"
+      : (isGoogle ? "brand-google" : "brand-android");
+
+    if (isGoogle) {
+      return {
+        source: googleBrandBadgeSource,
+        fallbackIcon: fallbackIcon
+      };
+    }
+
+    if (isXiaomiFamily) {
+      return {
+        source: xiaomiBrandBadgeSource,
+        fallbackIcon: fallbackIcon
+      };
+    }
+
+    if (brandName.indexOf("android") !== -1) {
+      return {
+        source: androidBrandBadgeSource,
+        fallbackIcon: fallbackIcon
+      };
+    }
+
+    return {
+      source: "",
+      fallbackIcon: fallbackIcon
+    };
   }
 
   function adbDeviceStateEntries() {
@@ -959,7 +1018,7 @@ Item {
     if (host === "" || port === "" || pairingCode === "") {
       const body = trSafe("panel.wireless-adb.missing-pair-parameters-description", "Enter the phone IP, pairing port, and pairing code");
       wirelessAdbStatusMessage = body;
-      ToastService.showWarning(trSafe("panel.wireless-adb.error-title", "Wireless ADB"), body, 5000);
+      KDEConnect.showWarningWithHistory(trSafe("panel.wireless-adb.error-title", "Wireless ADB"), body, 5000);
       return;
     }
 
@@ -979,7 +1038,7 @@ Item {
     if (host === "" || port === "") {
       const body = trSafe("panel.wireless-adb.missing-connect-parameters-description", "Enter the phone IP and connect port");
       wirelessAdbStatusMessage = body;
-      ToastService.showWarning(trSafe("panel.wireless-adb.error-title", "Wireless ADB"), body, 5000);
+      KDEConnect.showWarningWithHistory(trSafe("panel.wireless-adb.error-title", "Wireless ADB"), body, 5000);
       return;
     }
 
@@ -1069,10 +1128,35 @@ Item {
     return (embeddedVideoDevice || "").trim() !== "";
   }
 
+  function scheduleTouchMappingRefresh() {
+    Qt.callLater(function() {
+      root.refreshEmbeddedMirrorTouchMapping();
+    });
+  }
+
+  function clearPanelOpenUnlockState() {
+    root.panelOpenUnlockPending = false;
+    root.panelOpenUnlockRetriesRemaining = 0;
+  }
+
+  function retryPanelOpenUnlock() {
+    if (root.panelOpenUnlockRetriesRemaining > 0) {
+      root.panelOpenUnlockRetriesRemaining -= 1;
+      panelOpenUnlockTimer.restart();
+      return;
+    }
+
+    root.clearPanelOpenUnlockState();
+  }
+
+  function resetEmbeddedVideoDeviceAccess(checkKnown) {
+    embeddedVideoDeviceAccessible = false;
+    embeddedVideoDeviceCheckKnown = Boolean(checkKnown);
+  }
+
   function refreshEmbeddedVideoDeviceAccess() {
     if (!embeddedMirrorFeedConfigured()) {
-      embeddedVideoDeviceAccessible = false;
-      embeddedVideoDeviceCheckKnown = true;
+      resetEmbeddedVideoDeviceAccess(true);
       embeddedVideoDeviceLastCheckAtMs = Date.now();
       return;
     }
@@ -1081,7 +1165,7 @@ Item {
       return;
 
     if (!embeddedVideoDeviceCheckKnown)
-      embeddedVideoDeviceAccessible = false;
+      resetEmbeddedVideoDeviceAccess(false);
     embeddedVideoDeviceCheckProc.running = true;
   }
 
@@ -1097,91 +1181,14 @@ Item {
     refreshEmbeddedVideoDeviceAccess();
   }
 
-  function embeddedMirrorFeedSessionDegraded(preview, minimumAgeMs) {
-    if (!embeddedMirrorFeedConfigured()
-        || !KDEConnect.scrcpyRunning) {
-      return false;
-    }
-
-    const previewItem = preview || root.activePhonePreview || null;
-    const launchStartedAt = Number(KDEConnect.scrcpyLaunchStartedAtMs || 0);
-    const launchAgeMs = launchStartedAt > 0 ? (Date.now() - launchStartedAt) : Number.MAX_SAFE_INTEGER;
-    const requiredAgeMs = Math.max(0, Number(minimumAgeMs || 0));
-
-    if (previewItem && previewItem.mirrorDisplayVisible)
-      return false;
-
-    if (launchAgeMs < requiredAgeMs)
-      return false;
-
-    if (!previewItem)
-      return true;
-
-    if (!previewItem.mirrorFeedAvailable)
-      return true;
-
-    if (previewItem.mirrorFeedError !== "")
-      return true;
-
-    return false;
-  }
-
-  function embeddedMirrorFeedStable(preview) {
-    if (!embeddedMirrorFeedConfigured()
-        || !KDEConnect.scrcpyRunning
-        || KDEConnect.scrcpyLaunching
-        || KDEConnect.scrcpyLaunchError !== "") {
-      return false;
-    }
-
-    const previewItem = preview || root.activePhonePreview || null;
-    return previewItem !== null
-      && previewItem.mirrorDisplayVisible
-      && previewItem.mirrorFeedError === "";
-  }
-
-  function requestEmbeddedMirrorSessionRecovery(preview, reason) {
-    if (!embeddedMirrorModeEnabled())
-      return;
-
-    const recoveryReason = String(reason || "").trim();
-    const previewItem = preview || root.activePhonePreview || null;
-
-    root.embeddedMirrorRecoveryPreview = previewItem;
-    root.embeddedMirrorRecoveryReason = recoveryReason;
-
-    if (previewItem && previewItem.reloadMediaDevices)
-      previewItem.reloadMediaDevices();
-
-    if (KDEConnect.scrcpyRunning) {
-      if (root.embeddedMirrorPendingSessionRecovery)
-        return;
-
-      root.embeddedMirrorPendingSessionRecovery = true;
-      Logger.w("KDEConnect", "Recovering embedded mirror session",
-        "reason=" + recoveryReason);
-      KDEConnect.stopScrcpySession();
-      return;
-    }
-
-    root.embeddedMirrorPendingSessionRecovery = true;
-    embeddedMirrorRecoveryTimer.restart();
-  }
-
   function toggleEmbeddedMirrorAudioMode(preview) {
     if (!embeddedMirrorModeEnabled())
       return;
 
     embeddedMirrorAudioEnabled = !embeddedMirrorAudioEnabled;
 
-    if (!KDEConnect.scrcpyRunning || KDEConnect.scrcpyLaunching)
-      return;
-
-    const previewItem = preview || root.activePhonePreview || null;
-    requestEmbeddedMirrorSessionRecovery(
-      previewItem,
-      embeddedMirrorAudioEnabled ? "audio-enable" : "audio-disable"
-    );
+    if (KDEConnect.scrcpyRunning && !KDEConnect.scrcpyLaunching)
+      KDEConnect.stopScrcpySession();
   }
 
   function ensureEmbeddedMirrorSession(preview) {
@@ -1195,12 +1202,8 @@ Item {
     }
 
     if (!KDEConnect.scrcpyRunning && !KDEConnect.scrcpyLaunching) {
-      let tunedEmbeddedCommand = KDEConnect.applyMirrorPerformancePreset(
+      const tunedEmbeddedCommand = KDEConnect.applyConfiguredMirrorAudioMode(
         embeddedMirrorCommand,
-        "quality"
-      );
-      tunedEmbeddedCommand = KDEConnect.applyConfiguredMirrorAudioMode(
-        tunedEmbeddedCommand,
         embeddedMirrorAudioEnabled
       );
       const launchCommand = KDEConnect.buildScrcpyFeedCommand(
@@ -1228,9 +1231,7 @@ Item {
 
   function embeddedMirrorFeedReattaching(preview) {
     const previewItem = preview || root.activePhonePreview || null;
-    return Boolean(previewItem?.mediaDevicesReloadPending)
-      || Boolean(previewItem?.mirrorFeedRestarting)
-      || Boolean(previewItem?.mirrorFeedAttachDelayActive);
+    return Boolean(previewItem?.mirrorFeedAttachDelayActive);
   }
 
   function embeddedMirrorTouchActive() {
@@ -1267,6 +1268,19 @@ Item {
       KDEConnect.queryAdbDisplayInfo(serial);
   }
 
+  function refreshPanelOpenUnlockState() {
+    if (!root.panelOpenUnlockPending
+        || !root.embeddedMirrorModeEnabled()
+        || !KDEConnect.scrcpyRunning)
+      return;
+
+    const serial = currentMirrorAdbSerial();
+    if (serial === "")
+      return;
+
+    KDEConnect.queryAdbScreenState(serial);
+  }
+
   function embeddedMirrorDrawerStatusVisible(preview) {
     if (!embeddedMirrorModeEnabled())
       return false;
@@ -1300,111 +1314,12 @@ Item {
       : "";
   }
 
-  function embeddedMirrorDebugSerialLabel(serial) {
-    const trimmedSerial = String(serial || "").trim();
-    if (trimmedSerial === "")
-      return "auto";
-    if (trimmedSerial === KDEConnect.usbSelectionSentinel)
-      return "usb";
-    return trimmedSerial;
-  }
-
-  function embeddedMirrorDebugViewState(preview) {
-    if (!KDEConnect.scrcpyRunning)
-      return "idle";
-    if (preview?.mirrorDisplayVisible)
-      return "live";
-    return "waiting";
-  }
-
-  function embeddedMirrorDebugInputLabel(preview) {
-    const input = preview?.selectedVideoInput;
-    if (!input || input.isNull)
-      return "";
-
-    const description = String(input.description || "").trim();
-    const id = String(input.id || "").trim();
-    if (description !== "" && id !== "")
-      return description + " [" + id + "]";
-    return description !== "" ? description : id;
-  }
-
   function embeddedMirrorDrawerStatusTitle(preview) {
-    const baseTitle = embeddedMirrorStatusTitle(preview);
-    if (baseTitle !== "")
-      return baseTitle;
-
-    if (!embeddedMirrorModeEnabled())
-      return "";
-
-    if (!embeddedMirrorDiagnosticsEnabled)
-      return "";
-
-    return KDEConnect.scrcpyRunning
-      ? trSafe("panel.embedded-mirror.debug-title", "Mirror Diagnostics")
-      : trSafe("panel.embedded-mirror.debug-idle-title", "Mirror Idle");
+    return embeddedMirrorStatusTitle(preview);
   }
 
   function embeddedMirrorDrawerStatusSubtitle(preview) {
-    const lines = [];
-    const baseSubtitle = embeddedMirrorStatusSubtitle(preview);
-
-    if (!embeddedMirrorModeEnabled())
-      return baseSubtitle;
-
-    if (baseSubtitle !== "")
-      lines.push(baseSubtitle);
-
-    if (!embeddedMirrorDiagnosticsEnabled)
-      return lines.join("\n");
-
-    const scrcpyState = KDEConnect.scrcpyLaunching
-      ? "starting"
-      : (KDEConnect.scrcpyRunning
-          ? "running"
-          : (KDEConnect.scrcpyLaunchError !== "" ? "error" : "idle"));
-    const scrcpySerial = embeddedMirrorDebugSerialLabel(
-      KDEConnect.scrcpyRunning ? KDEConnect.scrcpyActiveSerial : resolvedAdbSerial()
-    );
-    const videoState = !embeddedMirrorFeedConfigured()
-      ? "not-set"
-      : (!embeddedVideoDeviceCheckKnown
-          ? "checking"
-          : (embeddedVideoDeviceAccessible ? "ok" : "blocked"));
-    const qtState = preview?.mirrorFeedAvailable ? "input" : "no-input";
-
-    lines.push("scrcpy: " + scrcpyState
-      + " • feed"
-      + " • " + scrcpySerial
-      + " • usb " + (KDEConnect.adbHasUsbTransport ? "yes" : "no"));
-    lines.push("video: " + embeddedVideoDevice
-      + " • " + videoState
-      + " • view " + embeddedMirrorDebugViewState(preview)
-      + " • qt " + qtState);
-
-    if (embeddedMirrorPendingSessionRecovery) {
-      const recoveryState = KDEConnect.scrcpyRunning ? "restarting" : "queued";
-      const recoveryLabel = embeddedMirrorRecoveryReason !== ""
-        ? (" • " + embeddedMirrorRecoveryReason)
-        : "";
-      lines.push("recovery: " + recoveryState + recoveryLabel);
-    }
-
-    const inputLabel = embeddedMirrorDebugInputLabel(preview);
-    if (inputLabel !== "")
-      lines.push("input: " + inputLabel);
-
-    const diagnosticError = preview?.mirrorFeedError !== ""
-      ? ("qt: " + preview.mirrorFeedError)
-      : (KDEConnect.scrcpyLaunchError !== ""
-          ? ("scrcpy: " + KDEConnect.scrcpyLaunchError)
-          : (KDEConnect.adbScreenError !== ""
-              ? ("adb: " + KDEConnect.adbScreenError)
-              : ""));
-    if (diagnosticError !== "")
-      lines.push(diagnosticError);
-
-    return lines.join("\n");
+    return embeddedMirrorStatusSubtitle(preview);
   }
 
   function embeddedMirrorStatusTitle(preview) {
@@ -1470,11 +1385,7 @@ Item {
         && !preview.mirrorFeedAvailable
         && Number(KDEConnect.scrcpyLaunchStartedAtMs || 0) > 0
         && (Date.now() - Number(KDEConnect.scrcpyLaunchStartedAtMs || 0)) >= 5000) {
-      const suffix = preview.availableVideoInputsSummary !== ""
-        ? (" Available inputs: " + preview.availableVideoInputsSummary)
-        : "";
-      return trSafe("panel.embedded-mirror.feed-starting-description", "Waiting for the V4L2 video feed to appear in Qt Multimedia.")
-        + suffix;
+      return trSafe("panel.embedded-mirror.feed-starting-description", "Waiting for the scrcpy video feed to appear in the embedded preview.");
     }
 
     if (embeddedMirrorFeedConfigured()
@@ -1484,9 +1395,9 @@ Item {
         && Number(KDEConnect.scrcpyLaunchStartedAtMs || 0) > 0
         && (Date.now() - Number(KDEConnect.scrcpyLaunchStartedAtMs || 0)) >= 5000) {
       const feedError = preview && preview.mirrorFeedError !== ""
-        ? (" Qt camera failed: " + preview.mirrorFeedError)
+        ? (" Preview failed: " + preview.mirrorFeedError)
         : "";
-      return trSafe("panel.embedded-mirror.feed-starting-description", "Waiting for the V4L2 video feed to appear in Qt Multimedia.")
+      return trSafe("panel.embedded-mirror.feed-starting-description", "Waiting for the scrcpy video feed to appear in the embedded preview.")
         + feedError;
     }
 
@@ -1532,6 +1443,69 @@ Item {
   }
 
   Process {
+    id: embeddedMirrorFormatLockProc
+    running: false
+    command: ["sh", "-lc",
+      "device=" + KDEConnect.shellQuote(root.embeddedVideoDevice)
+      + "; [ -c \"$device\" ] || exit 2"
+      + "; base=/sys/devices/virtual/video4linux/$(basename \"$device\")"
+      + "; i=0; fmt=''; prev_fmt=''; stable_fmt=''"
+      + "; while [ $i -lt 40 ]; do"
+      + " fmt=$(cat \"$base/format\" 2>/dev/null || true)"
+      + "; if [ -n \"$fmt\" ] && [ \"$fmt\" = \"$prev_fmt\" ]; then stable_fmt=\"$fmt\"; break; fi"
+      + "; [ -n \"$fmt\" ] && prev_fmt=\"$fmt\""
+      + "; i=$((i+1))"
+      + "; sleep 0.05"
+      + "; done"
+      + "; [ -n \"$stable_fmt\" ] && fmt=\"$stable_fmt\" || fmt=\"$prev_fmt\""
+      + "; [ -n \"$fmt\" ] || exit 3"
+      + "; v4l2-ctl -d \"$device\" -c keep_format=1 >/dev/null 2>&1 || exit 4"
+      + "; printf 'locked_format=%s\\n' \"$fmt\""
+      + "; v4l2-ctl -d \"$device\" -C keep_format 2>/dev/null | sed 's/^/keep_format=/'"
+    ]
+
+    stdout: StdioCollector {
+      onStreamFinished: {
+        const output = String(text || "").trim();
+        if (output !== "") {
+          Logger.i("KDEConnect", "Embedded format lock output:\n" + output);
+          if (root.activePhonePreview) {
+            const lines = output.split("\n");
+            for (let i = 0; i < lines.length; ++i) {
+              const line = String(lines[i] || "").trim();
+              if (line !== "")
+                root.activePhonePreview.debugLog("formatLock " + line);
+            }
+          }
+        }
+      }
+    }
+
+    stderr: StdioCollector {
+      onStreamFinished: {
+        const output = String(text || "").trim();
+        if (output !== "") {
+          Logger.w("KDEConnect", "Embedded format lock stderr:", output);
+          if (root.activePhonePreview)
+            root.activePhonePreview.debugLog("formatLock stderr=" + output);
+        }
+      }
+    }
+
+    onExited: (exitCode, exitStatus) => {
+      Logger.i("KDEConnect", "Embedded format lock exited:", exitCode);
+      if (root.activePhonePreview)
+        root.activePhonePreview.debugLog("formatLock exitCode=" + exitCode);
+      if (exitCode === 0 && root.activePhonePreview) {
+        Qt.callLater(function() {
+          if (root.activePhonePreview)
+            root.activePhonePreview.probeNativeLoopback();
+        });
+      }
+    }
+  }
+
+  Process {
     id: wirelessAdbQrEncodeProc
     running: false
     command: [
@@ -1559,7 +1533,7 @@ Item {
       root.wirelessAdbQrPendingLaunch = false;
       const body = root.trSafe("panel.wireless-adb.qr-generate-error-description", "Failed to generate the Wireless ADB QR code.");
       root.wirelessAdbStatusMessage = body;
-      ToastService.showWarning(root.trSafe("panel.wireless-adb.error-title", "Wireless ADB"), body, 5000);
+      KDEConnect.showWarningWithHistory(root.trSafe("panel.wireless-adb.error-title", "Wireless ADB"), body, 5000);
     }
   }
 
@@ -1670,7 +1644,83 @@ Item {
     if (!embeddedMirrorInputActive())
       return;
 
-    KDEConnect.runAdbKeyevent(currentMirrorAdbSerial(), 224); // WAKEUP
+    const serial = currentMirrorAdbSerial();
+    if (serial === "")
+      return;
+
+    const hasFreshState = KDEConnect.hasFreshAdbScreenState(serial);
+    const shouldWake = !hasFreshState || !KDEConnect.adbScreenInteractive;
+    const shouldUnlock = hasFreshState && KDEConnect.adbScreenLockState === "true";
+
+    if (shouldWake)
+      KDEConnect.runAdbKeyevent(serial, 224); // WAKEUP
+    if (shouldUnlock)
+      KDEConnect.runAdbKeyevent(serial, 82); // MENU / dismiss keyguard
+  }
+
+  function takeMirrorScreenshot() {
+    if (!embeddedMirrorInputActive())
+      return;
+
+    KDEConnect.takeAdbScreenshot(currentMirrorAdbSerial());
+  }
+
+  function toggleMirrorScreenRecording() {
+    if (KDEConnect.adbScreenRecordingActive) {
+      KDEConnect.stopAdbScreenRecording();
+      return;
+    }
+
+    if (!embeddedMirrorInputActive())
+      return;
+
+    KDEConnect.startAdbScreenRecording(currentMirrorAdbSerial());
+  }
+
+  function toggleKeepScreenOnWhilePanelOpen() {
+    const serial = String(keepScreenOnSerial || currentMirrorAdbSerial() || "").trim();
+    if (serial === "")
+      return;
+
+    if (keepScreenOnEnabled) {
+      restoreKeepScreenOnState();
+      return;
+    }
+
+    keepScreenOnSerial = serial;
+    if (KDEConnect.hasFreshAdbScreenTimeout(serial)) {
+      keepScreenOnPending = false;
+      keepScreenOnEnabled = true;
+      keepScreenOnOriginalTimeout = String(KDEConnect.adbScreenTimeoutValue || "").trim();
+      KDEConnect.setAdbScreenTimeout(serial, String(keepScreenOnTimeoutMs));
+      return;
+    }
+
+    keepScreenOnPending = true;
+    KDEConnect.queryAdbScreenTimeout(serial);
+  }
+
+  function restoreKeepScreenOnState() {
+    const serial = String(keepScreenOnSerial || "").trim();
+    keepScreenOnPending = false;
+    if (serial !== "" && keepScreenOnEnabled)
+      KDEConnect.restoreAdbScreenTimeout(serial, keepScreenOnOriginalTimeout);
+
+    keepScreenOnEnabled = false;
+    keepScreenOnSerial = "";
+    keepScreenOnOriginalTimeout = "";
+  }
+
+  function restoreDimScreenState() {
+    const serial = String(dimScreenSerial || "").trim();
+    dimScreenPending = false;
+    if (serial !== "" && dimScreenEnabled)
+      KDEConnect.restoreAdbScreenBrightness(serial, dimScreenOriginalMode, dimScreenOriginalBrightness);
+
+    dimScreenEnabled = false;
+    dimScreenSerial = "";
+    dimScreenOriginalMode = "";
+    dimScreenOriginalBrightness = "";
   }
 
   component NavActionButton: Rectangle {
@@ -1678,7 +1728,9 @@ Item {
 
     property string iconName: ""
     property string label: ""
+    property string tooltipText: ""
     property bool actionEnabled: true
+    property bool active: false
     property bool circular: false
     property real sizeScale: root.navButtonScaleFactor
     property real circularSize: 46 * Style.uiScaleRatio * sizeScale
@@ -1697,20 +1749,28 @@ Item {
           : (navMouse.containsMouse ? 1.08 : 1.0))
       : 1.0
     color: circular
-      ? (navMouse.containsMouse
-          ? Color.mHover
-          : Color.mSurfaceVariant)
-      : (navMouse.containsMouse
-          ? Qt.rgba(Color.mSurface.r, Color.mSurface.g, Color.mSurface.b, 0.96)
-          : Qt.rgba(Color.mSurface.r, Color.mSurface.g, Color.mSurface.b, 0.82))
+      ? (navButton.active
+          ? Qt.rgba(Color.mPrimary.r, Color.mPrimary.g, Color.mPrimary.b, 0.18)
+          : (navMouse.containsMouse
+              ? Color.mHover
+              : Color.mSurfaceVariant))
+      : (navButton.active
+          ? Qt.rgba(Color.mPrimary.r, Color.mPrimary.g, Color.mPrimary.b, 0.16)
+          : (navMouse.containsMouse
+              ? Qt.rgba(Color.mSurface.r, Color.mSurface.g, Color.mSurface.b, 0.96)
+              : Qt.rgba(Color.mSurface.r, Color.mSurface.g, Color.mSurface.b, 0.82)))
     border.width: Style.borderS
     border.color: circular
-      ? (navMouse.containsMouse
-          ? Color.mOutline
-          : Color.mOutline)
-      : (navMouse.containsMouse
-          ? Qt.rgba(Color.mPrimary.r, Color.mPrimary.g, Color.mPrimary.b, 0.32)
-          : Qt.rgba(Color.mOutline.r, Color.mOutline.g, Color.mOutline.b, 0.22))
+      ? (navButton.active
+          ? Color.mPrimary
+          : (navMouse.containsMouse
+              ? Color.mOutline
+              : Color.mOutline))
+      : (navButton.active
+          ? Qt.rgba(Color.mPrimary.r, Color.mPrimary.g, Color.mPrimary.b, 0.52)
+          : (navMouse.containsMouse
+              ? Qt.rgba(Color.mPrimary.r, Color.mPrimary.g, Color.mPrimary.b, 0.32)
+              : Qt.rgba(Color.mOutline.r, Color.mOutline.g, Color.mOutline.b, 0.22)))
     opacity: actionEnabled ? 1.0 : 0.55
 
     Behavior on color {
@@ -1730,6 +1790,14 @@ Item {
       enabled: navButton.actionEnabled
       hoverEnabled: navButton.actionEnabled
       cursorShape: navButton.actionEnabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+      onEntered: {
+        if (navButton.tooltipText !== "")
+          TooltipService.show(navButton, navButton.tooltipText, "top");
+      }
+      onExited: {
+        if (navButton.tooltipText !== "")
+          TooltipService.hide(navButton);
+      }
       onClicked: navButton.pressed()
     }
 
@@ -1742,9 +1810,11 @@ Item {
         icon: navButton.iconName
         pointSize: (navButton.circular ? Style.fontSizeS : Style.fontSizeXS) * navButton.sizeScale
         color: navButton.actionEnabled
-          ? (navButton.circular
-              ? (navMouse.containsMouse ? Color.mOnHover : Color.mPrimary)
-              : Color.mOnSurface)
+          ? (navButton.active
+              ? Color.mPrimary
+              : (navButton.circular
+                  ? (navMouse.containsMouse ? Color.mOnHover : Color.mPrimary)
+                  : Color.mOnSurface))
           : Color.mOnSurfaceVariant
       }
 
@@ -1755,6 +1825,39 @@ Item {
         font.weight: Style.fontWeightMedium
         color: navButton.actionEnabled ? Color.mOnSurface : Color.mOnSurfaceVariant
       }
+    }
+  }
+
+  component PanelActionIconButton: NIconButton {
+    id: panelActionIconButton
+
+    property bool active: false
+
+    baseSize: Style.baseWidgetSize * 0.8
+    colorBg: active ? root.shellButtonActiveBgColor : root.shellButtonBgColor
+    colorFg: active ? root.shellButtonActiveFgColor : root.shellButtonFgColor
+    colorBgHover: active ? root.shellButtonActiveBgColor : root.shellButtonBgHoverColor
+    colorFgHover: active ? root.shellButtonActiveFgColor : root.shellButtonFgHoverColor
+    colorBorder: active ? root.shellButtonActiveBorderColor : root.shellButtonBorderColor
+    colorBorderHover: active ? root.shellButtonActiveBorderColor : root.shellButtonBorderHoverColor
+  }
+
+  component UtilityActionCard: NBox {
+    id: utilityCard
+
+    default property alias contentData: utilityCardContent.data
+
+    Layout.fillWidth: true
+    implicitHeight: utilityCardContent.implicitHeight + Style.margin2M
+
+    GridLayout {
+      id: utilityCardContent
+      anchors.fill: parent
+      anchors.margins: Style.marginM
+      rows: 1
+      flow: GridLayout.LeftToRight
+      columnSpacing: Style.marginM
+      rowSpacing: 0
     }
   }
 
@@ -1954,19 +2057,33 @@ Item {
                         Layout.fillWidth: true
 
                         Rectangle {
+                          readonly property var brandBadge: root.deviceBrandBadge(KDEConnect.mainDevice?.name || "")
+                          readonly property bool brandBadgeFrameless: brandBadge.source !== ""
                           Layout.alignment: Qt.AlignVCenter
                           Layout.preferredWidth: 34 * Style.uiScaleRatio
                           Layout.preferredHeight: 34 * Style.uiScaleRatio
                           radius: 17 * Style.uiScaleRatio
-                          color: "#211814"
-                          border.width: Style.borderS
-                          border.color: "#6c4c3e"
+                          color: brandBadgeFrameless ? "transparent" : root.shellIconChipColor
+                          border.width: brandBadgeFrameless ? 0 : Style.borderS
+                          border.color: brandBadgeFrameless ? "transparent" : root.shellIconChipBorderColor
+
+                          Image {
+                            anchors.centerIn: parent
+                            visible: parent.brandBadge.source !== ""
+                            source: parent.brandBadge.source
+                            width: parent.brandBadgeFrameless ? parent.width : parent.width * 0.72
+                            height: parent.brandBadgeFrameless ? parent.height : parent.height * 0.72
+                            fillMode: Image.PreserveAspectFit
+                            smooth: true
+                            mipmap: true
+                          }
 
                           NIcon {
                             anchors.centerIn: parent
-                            icon: "device-mobile"
+                            visible: parent.brandBadge.source === ""
+                            icon: parent.brandBadge.fallbackIcon
                             pointSize: Style.fontSizeS
-                            color: "#f4ae89"
+                            color: root.shellPrimaryTextColor
                           }
                         }
 
@@ -1974,7 +2091,7 @@ Item {
                           text: KDEConnect.mainDevice.name
                           pointSize: Style.fontSizeL * 1.55
                           font.weight: Style.fontWeightBold
-                          color: "#fff5ef"
+                          color: root.shellPrimaryTextColor
                           Layout.fillWidth: true
                           elide: Text.ElideRight
                         }
@@ -1983,17 +2100,10 @@ Item {
                           Layout.alignment: Qt.AlignRight | Qt.AlignVCenter
                           spacing: Style.marginXS
 
-                          NIconButton {
+                          PanelActionIconButton {
                             readonly property bool multipleDevices: KDEConnect.devices.length > 1
                             icon: "swipe"
                             tooltipText: multipleDevices ? pluginApi?.tr("panel.other-devices") : ""
-                            baseSize: Style.baseWidgetSize * 0.8
-                            colorBg: "#211814"
-                            colorFg: "#f4ae89"
-                            colorBgHover: "#3a261f"
-                            colorFgHover: "#fff4ed"
-                            colorBorder: "#6c4c3e"
-                            colorBorderHover: "#f4ae89"
                             onClicked: {
                               deviceSwitcherOpen = !deviceSwitcherOpen
                             }
@@ -2001,88 +2111,46 @@ Item {
                             opacity: multipleDevices ? 1.0 : 0.0
                           }
 
-                          NIconButton {
+                          PanelActionIconButton {
                             icon: "zoom-in"
                             tooltipText: root.trSafe("panel.phone-size.tooltip", "Phone size: ")
                               + root.phoneSizeLabel + " (" + root.phoneSizePercent + "%)"
-                            baseSize: Style.baseWidgetSize * 0.8
-                            colorBg: "#211814"
-                            colorFg: "#f4ae89"
-                            colorBgHover: "#3a261f"
-                            colorFgHover: "#fff4ed"
-                            colorBorder: "#6c4c3e"
-                            colorBorderHover: "#f4ae89"
                             onClicked: root.cyclePhoneSizePreset()
                           }
 
-                          NIconButton {
+                          PanelActionIconButton {
                             visible: root.embeddedMirrorModeEnabled()
                             icon: root.embeddedMirrorAudioEnabled ? "volume" : "volume-off"
                             tooltipText: root.embeddedMirrorAudioEnabled
                               ? root.trSafe("panel.embedded-mirror.audio-disable", "Disable embedded audio")
                               : root.trSafe("panel.embedded-mirror.audio-enable", "Enable embedded audio")
-                            baseSize: Style.baseWidgetSize * 0.8
-                            colorBg: "#211814"
-                            colorFg: "#f4ae89"
-                            colorBgHover: "#3a261f"
-                            colorFgHover: "#fff4ed"
-                            colorBorder: "#6c4c3e"
-                            colorBorderHover: "#f4ae89"
-                            enabled: !root.embeddedMirrorPendingSessionRecovery
+                            enabled: !KDEConnect.scrcpyLaunching
                             onClicked: root.toggleEmbeddedMirrorAudioMode()
                           }
 
-                          NIconButton {
+                          PanelActionIconButton {
                             icon: "wifi"
                             tooltipText: KDEConnect.wirelessAdbBusy
                               ? root.trSafe("panel.wireless-adb.busy-tooltip", "Wireless ADB command is running")
                               : root.trSafe("panel.wireless-adb.tooltip", "Open Wireless ADB tools")
-                            baseSize: Style.baseWidgetSize * 0.8
-                            colorBg: "#211814"
-                            colorFg: "#f4ae89"
-                            colorBgHover: "#3a261f"
-                            colorFgHover: "#fff4ed"
-                            colorBorder: "#6c4c3e"
-                            colorBorderHover: "#f4ae89"
                             onClicked: root.openWirelessAdbDialog()
                           }
 
-                          NIconButton {
+                          PanelActionIconButton {
                             icon: "device-mobile-search"
                             tooltipText: pluginApi?.tr("panel.browse-device")
-                            baseSize: Style.baseWidgetSize * 0.8
-                            colorBg: "#211814"
-                            colorFg: "#f4ae89"
-                            colorBgHover: "#3a261f"
-                            colorFgHover: "#fff4ed"
-                            colorBorder: "#6c4c3e"
-                            colorBorderHover: "#f4ae89"
                             onClicked: KDEConnect.browseFiles(KDEConnect.mainDevice.id)
                           }
 
-                          NIconButton {
+                          PanelActionIconButton {
                             icon: "device-mobile-share"
                             tooltipText: pluginApi?.tr("panel.send-file")
-                            baseSize: Style.baseWidgetSize * 0.8
-                            colorBg: "#211814"
-                            colorFg: "#f4ae89"
-                            colorBgHover: "#3a261f"
-                            colorFgHover: "#fff4ed"
-                            colorBorder: "#6c4c3e"
-                            colorBorderHover: "#f4ae89"
                             onClicked: shareFilePicker.open()
                           }
 
-                          NIconButton {
+                          PanelActionIconButton {
                             icon: "radar"
                             tooltipText: pluginApi?.tr("panel.find-device")
-                            baseSize: Style.baseWidgetSize * 0.8
-                            colorBg: "#211814"
-                            colorFg: "#f4ae89"
-                            colorBgHover: "#3a261f"
-                            colorFgHover: "#fff4ed"
-                            colorBorder: "#6c4c3e"
-                            colorBorderHover: "#f4ae89"
                             onClicked: KDEConnect.triggerFindMyPhone(KDEConnect.mainDevice.id)
                           }
                         }
@@ -2131,7 +2199,7 @@ Item {
                           anchors.fill: parent
                           mirrorFeedEnabled: KDEConnect.scrcpyRunning
                           mirrorDeviceIdMatch: root.embeddedVideoDevice
-                          mirrorDeviceDescriptionMatch: root.embeddedVideoLabel
+                          mirrorDeviceDescriptionMatch: "scrcpy-panel"
                           mirrorContentWidth: KDEConnect.adbScreenWidth
                           mirrorContentHeight: KDEConnect.adbScreenHeight
                           interactiveScreen: root.embeddedMirrorTouchActive()
@@ -2160,6 +2228,7 @@ Item {
                           onTextRequested: text => root.sendKeyboardText(text)
                           onKeyRequested: keyCode => root.sendKeyboardKey(keyCode)
                           onHomeRequested: root.sendAndroidHomeOrUnlock()
+                          onRecentsRequested: root.sendAndroidNavKey(187)
                         }
                       }
 
@@ -2177,6 +2246,7 @@ Item {
                           circular: true
                           iconName: "arrow-back"
                           label: root.trSafe("panel.embedded-mirror.nav-back", "Back")
+                          tooltipText: root.trSafe("panel.embedded-mirror.nav-back-tooltip", "Back, mouse right click")
                           actionEnabled: root.embeddedMirrorInputActive()
                           onPressed: root.sendAndroidNavKey(4)
                         }
@@ -2187,6 +2257,7 @@ Item {
                           circular: true
                           iconName: "home"
                           label: root.trSafe("panel.embedded-mirror.nav-home", "Home")
+                          tooltipText: root.trSafe("panel.embedded-mirror.nav-home-tooltip", "Home, Home key")
                           actionEnabled: root.embeddedMirrorInputActive()
                           onPressed: root.sendAndroidNavKey(3)
                         }
@@ -2197,6 +2268,7 @@ Item {
                           circular: true
                           iconName: "layout-grid"
                           label: root.trSafe("panel.embedded-mirror.nav-recents", "Recents")
+                          tooltipText: root.trSafe("panel.embedded-mirror.nav-recents-tooltip", "Task picker, mouse wheel press")
                           actionEnabled: root.embeddedMirrorInputActive()
                           onPressed: root.sendAndroidNavKey(187)
                         }
@@ -2225,7 +2297,7 @@ Item {
                           NIcon {
                             icon: deviceData.getBatteryIcon(root.effectiveBatteryValue(KDEConnect.mainDevice), root.effectiveChargingValue(KDEConnect.mainDevice))
                             pointSize: Style.fontSizeXL * 1.2075
-                            color: "#f4e3b6"
+                            color: root.shellPrimaryIconColor
                             Layout.alignment: Qt.AlignTop
                             Layout.preferredWidth: 38 * Style.uiScaleRatio
                           }
@@ -2237,7 +2309,7 @@ Item {
                             NText {
                               text: pluginApi?.tr("panel.card.battery") || "Battery"
                               pointSize: Style.fontSizeS * 1.15
-                              color: "#c9b79b"
+                              color: root.shellSecondaryTextColor
                             }
 
                             NText {
@@ -2246,7 +2318,7 @@ Item {
                                 : (root.effectiveBatteryValue(KDEConnect.mainDevice) + "%")
                               pointSize: Style.fontSizeL * 1.288
                               font.weight: Style.fontWeightBold
-                              color: "#fff5ef"
+                              color: root.shellPrimaryTextColor
                             }
                           }
                         }
@@ -2258,7 +2330,7 @@ Item {
                           NIcon {
                             icon: deviceData.getCellularTypeIcon(root.effectiveNetworkType(KDEConnect.mainDevice))
                             pointSize: Style.fontSizeXL * 1.2075
-                            color: "#f4e3b6"
+                            color: root.shellPrimaryIconColor
                             Layout.alignment: Qt.AlignTop
                             Layout.preferredWidth: 38 * Style.uiScaleRatio
                           }
@@ -2270,14 +2342,14 @@ Item {
                             NText {
                               text: pluginApi?.tr("panel.card.network") || "Network"
                               pointSize: Style.fontSizeS * 1.15
-                              color: "#c9b79b"
+                              color: root.shellSecondaryTextColor
                             }
 
                             NText {
                               text: root.effectiveNetworkType(KDEConnect.mainDevice) || (pluginApi?.tr("panel.unknown") || "Unknown")
                               pointSize: Style.fontSizeL * 1.288
                               font.weight: Style.fontWeightBold
-                              color: "#fff5ef"
+                              color: root.shellPrimaryTextColor
                             }
                           }
                         }
@@ -2289,7 +2361,7 @@ Item {
                           NIcon {
                             icon: deviceData.getCellularStrengthIcon(root.effectiveSignalStrength(KDEConnect.mainDevice))
                             pointSize: Style.fontSizeXL * 1.2075
-                            color: "#f4e3b6"
+                            color: root.shellPrimaryIconColor
                             Layout.alignment: Qt.AlignTop
                             Layout.preferredWidth: 38 * Style.uiScaleRatio
                           }
@@ -2301,7 +2373,7 @@ Item {
                             NText {
                               text: root.trSafe("panel.card.signal", "Signal")
                               pointSize: Style.fontSizeS * 1.15
-                              color: "#c9b79b"
+                              color: root.shellSecondaryTextColor
                             }
 
                             NText {
@@ -2309,8 +2381,54 @@ Item {
                                 || (pluginApi?.tr("panel.unknown") || "Unknown")
                               pointSize: Style.fontSizeL * 1.288
                               font.weight: Style.fontWeightBold
-                              color: "#fff5ef"
+                              color: root.shellPrimaryTextColor
                             }
+                          }
+                        }
+
+                        UtilityActionCard {
+                          id: mirrorUtilityCard
+                          visible: root.embeddedMirrorModeEnabled()
+
+                          PanelActionIconButton {
+                            Layout.alignment: Qt.AlignHCenter
+                            icon: "camera"
+                            tooltipText: root.trSafe("panel.embedded-mirror.screenshot", "Take Screenshot")
+                            enabled: root.embeddedMirrorInputActive() && !KDEConnect.adbScreenshotBusy
+                            onClicked: root.takeMirrorScreenshot()
+                          }
+
+                          PanelActionIconButton {
+                            Layout.alignment: Qt.AlignHCenter
+                            icon: "video"
+                            tooltipText: KDEConnect.adbScreenRecordingActive
+                              ? root.trSafe("panel.embedded-mirror.record-stop", "Stop Recording")
+                              : root.trSafe("panel.embedded-mirror.record-start", "Start Recording")
+                            enabled: KDEConnect.adbScreenRecordingActive
+                              || (root.embeddedMirrorInputActive() && !KDEConnect.adbScreenRecordingBusy)
+                            active: KDEConnect.adbScreenRecordingActive
+                            onClicked: root.toggleMirrorScreenRecording()
+                          }
+
+                          PanelActionIconButton {
+                            Layout.alignment: Qt.AlignHCenter
+                            icon: "moon"
+                            tooltipText: root.trSafe("panel.embedded-mirror.keep-screen-on", "Keep Screen Awake")
+                            enabled: (root.embeddedMirrorInputActive() && !root.keepScreenOnPending)
+                              || root.keepScreenOnEnabled
+                            active: root.keepScreenOnEnabled || root.keepScreenOnPending
+                            onClicked: root.toggleKeepScreenOnWhilePanelOpen()
+                          }
+
+                          PanelActionIconButton {
+                            Layout.alignment: Qt.AlignHCenter
+                            icon: root.dimScreenEnabled ? "sun-dim" : "sun"
+                            tooltipText: root.dimScreenEnabled
+                              ? root.trSafe("panel.embedded-mirror.screen-restore", "Restore Screen Brightness")
+                              : root.trSafe("panel.embedded-mirror.screen-dim", "Set Screen to Minimum Brightness")
+                            enabled: root.embeddedMirrorInputActive() || root.dimScreenEnabled
+                            active: root.dimScreenEnabled || root.dimScreenPending
+                            onClicked: root.toggleMirrorScreenDim()
                           }
                         }
 
@@ -2323,10 +2441,13 @@ Item {
                         Layout.preferredHeight: Math.min(
                           implicitHeight,
                           Math.max(
-                            (root.phoneSizePresetIndex === 0 ? 104 : (root.phoneSizePresetIndex === 1 ? 118 : 132)) * Style.uiScaleRatio,
+                            root.phoneSizeValue(104, 118, 132) * Style.uiScaleRatio,
                             phonePreviewContainer.height
                               - rightInfoColumn.Layout.topMargin
                               - deviceSummaryColumn.implicitHeight
+                              - (mirrorUtilityCard.visible
+                                  ? (mirrorUtilityCard.implicitHeight + rightInfoColumn.spacing)
+                                  : 0)
                               - rightInfoColumn.spacing
                           )
                         )
@@ -2335,12 +2456,12 @@ Item {
                         visible: root.embeddedMirrorDrawerStatusVisible(phonePreview)
                         implicitHeight: Math.max(
                           drawerStatusContent.implicitHeight + (Style.marginM * 1.8),
-                          (root.phoneSizePresetIndex === 0 ? 104 : (root.phoneSizePresetIndex === 1 ? 118 : 132)) * Style.uiScaleRatio
+                          root.phoneSizeValue(104, 118, 132) * Style.uiScaleRatio
                         )
                         radius: 18 * Style.uiScaleRatio
-                        color: "#211814"
+                        color: root.shellCardColor
                         border.width: Style.borderS
-                        border.color: "#6c4c3e"
+                        border.color: root.shellCardBorderColor
                         clip: true
 
                         ColumnLayout {
@@ -2352,9 +2473,9 @@ Item {
                           NText {
                             Layout.fillWidth: true
                             text: root.embeddedMirrorDrawerStatusTitle(phonePreview)
-                            pointSize: Style.fontSizeS * (root.phoneSizePresetIndex === 0 ? 1.02 : 1.1)
+                            pointSize: Style.fontSizeS * root.phoneSizeValue(1.02, 1.1, 1.1)
                             font.weight: Style.fontWeightBold
-                            color: "#fff4ed"
+                            color: root.shellPrimaryTextColor
                             visible: text !== ""
                             wrapMode: Text.WordWrap
                             maximumLineCount: 2
@@ -2364,8 +2485,8 @@ Item {
                           NText {
                             Layout.fillWidth: true
                             text: root.embeddedMirrorDrawerStatusSubtitle(phonePreview)
-                            pointSize: Style.fontSizeXS * (root.phoneSizePresetIndex === 0 ? 1.0 : 1.06)
-                            color: "#d9c8bb"
+                            pointSize: Style.fontSizeXS * root.phoneSizeValue(1.0, 1.06, 1.06)
+                            color: root.shellSecondaryTextColor
                             visible: text !== ""
                             wrapMode: Text.WordWrap
                           }
@@ -2373,10 +2494,10 @@ Item {
                           Rectangle {
                             Layout.fillWidth: true
                             visible: root.setupRequiredLoopbackCommandVisible()
-                            color: "#2b211d"
+                            color: root.shellNestedCardColor
                             radius: 14 * Style.uiScaleRatio
                             border.width: Style.borderS
-                            border.color: "#7d5b4e"
+                            border.color: root.shellNestedCardBorderColor
                             implicitHeight: drawerLoopbackCommandColumn.implicitHeight + (Style.marginM * 1.2)
 
                             ColumnLayout {
@@ -2392,14 +2513,14 @@ Item {
                                 NIcon {
                                   icon: "copy"
                                   pointSize: Style.fontSizeM
-                                  color: "#f4d0be"
+                                  color: root.shellAccentIconColor
                                 }
 
                                 NText {
                                   Layout.fillWidth: true
                                   text: root.trSafe("panel.setup-required.command-label", "Click to copy the loopback setup command")
                                   pointSize: Style.fontSizeS
-                                  color: "#f0d8ca"
+                                  color: root.shellAccentTextColor
                                   wrapMode: Text.WordWrap
                                 }
                               }
@@ -2408,7 +2529,7 @@ Item {
                                 Layout.fillWidth: true
                                 text: root.embeddedMirrorLoopbackSetupCommand
                                 pointSize: Style.fontSizeXS
-                                color: "#fff4ed"
+                                color: root.shellPrimaryTextColor
                                 wrapMode: Text.WrapAnywhere
                                 font.family: "monospace"
                               }
@@ -2455,7 +2576,7 @@ Item {
           Layout.fillWidth: true
           Layout.fillHeight: true
           Layout.minimumHeight: implicitHeight
-          color: "#1c1517"
+          color: root.shellStageColor
           radius: 24 * Style.uiScaleRatio
           implicitHeight: noDevicePairedContent.implicitHeight + (Style.marginL * 2.4)
 
@@ -2473,7 +2594,7 @@ Item {
                 text: KDEConnect.mainDevice?.name || root.trSafe("panel.unknown", "Unknown")
                 pointSize: Style.fontSizeXXL
                 font.weight: Style.fontWeightBold
-                color: "#fff4ed"
+                color: root.shellPrimaryTextColor
                 Layout.fillWidth: true
                 wrapMode: Text.WordWrap
               }
@@ -2483,10 +2604,10 @@ Item {
               Layout.fillWidth: true
               Layout.fillHeight: true
               Layout.minimumHeight: pairStateColumn.implicitHeight + (Style.marginL * 1.8)
-              color: "#241b1d"
+              color: root.shellCardColor
               radius: 20 * Style.uiScaleRatio
               border.width: Style.borderS
-              border.color: "#6c4c3e"
+              border.color: root.shellCardBorderColor
 
               ColumnLayout {
                 id: pairStateColumn
@@ -2507,15 +2628,15 @@ Item {
                       width: 48 * Style.uiScaleRatio
                       height: width
                       radius: width / 2
-                      color: KDEConnect.mainDevice.pairRequested ? "#3a261f" : "#2f231c"
+                      color: KDEConnect.mainDevice.pairRequested ? root.shellAccentCardColor : root.shellIconChipColor
                       border.width: Style.borderS
-                      border.color: KDEConnect.mainDevice.pairRequested ? "#f4ae89" : "#6c4c3e"
+                      border.color: KDEConnect.mainDevice.pairRequested ? root.shellAccentCardBorderColor : root.shellIconChipBorderColor
 
                       NIcon {
                         anchors.centerIn: parent
                         icon: KDEConnect.mainDevice.pairRequested ? "key" : "device-mobile"
                         pointSize: Style.fontSizeXL
-                        color: KDEConnect.mainDevice.pairRequested ? "#ffd7c3" : "#f4ae89"
+                        color: KDEConnect.mainDevice.pairRequested ? root.shellAccentIconColor : root.shellIconChipFgColor
                       }
                     }
 
@@ -2528,7 +2649,7 @@ Item {
                           : root.trSafe("panel.pair-needed-title", "Pairing Needed")
                         pointSize: Style.fontSizeL * 1.06
                         font.weight: Style.fontWeightBold
-                        color: "#fff4ed"
+                        color: root.shellPrimaryTextColor
                       }
 
                       NText {
@@ -2536,7 +2657,7 @@ Item {
                           ? root.trSafe("panel.pair-requested-subtitle", "Approve the request on the phone to restore controls.")
                           : root.trSafe("panel.pair-needed-subtitle", "KDE Connect reported this device as temporarily unpaired.")
                         pointSize: Style.fontSizeS * 1.02
-                        color: "#cdb7ab"
+                        color: root.shellSecondaryTextColor
                       }
                     }
                   }
@@ -2547,7 +2668,7 @@ Item {
                   text: KDEConnect.mainDevice.pairRequested
                     ? root.trSafe("panel.pair-requested", "Confirm the pairing request on the phone. The mirror and device actions will come back automatically after approval.")
                     : root.trSafe("panel.pair-description", "This device is temporarily reported as unpaired. Retry pairing here if KDE Connect did not recover on its own after reconnecting.")
-                  color: "#d9c8bb"
+                  color: root.shellSecondaryTextColor
                   horizontalAlignment: Text.AlignHCenter
                   wrapMode: Text.WordWrap
                 }
@@ -2568,10 +2689,10 @@ Item {
                 Rectangle {
                   Layout.alignment: Qt.AlignHCenter
                   visible: KDEConnect.mainDevice.pairRequested && String(KDEConnect.mainDevice.verificationKey || "").trim() !== ""
-                  color: "#2e2220"
+                  color: root.shellAccentCardColor
                   radius: 14 * Style.uiScaleRatio
                   border.width: Style.borderS
-                  border.color: "#7d5b4e"
+                  border.color: root.shellAccentCardBorderColor
                   implicitWidth: verificationRow.implicitWidth + (Style.marginM * 1.4)
                   implicitHeight: verificationRow.implicitHeight + (Style.marginS * 1.4)
 
@@ -2583,14 +2704,14 @@ Item {
                     NIcon {
                       icon: "key"
                       pointSize: Style.fontSizeL
-                      color: "#f4d0be"
+                      color: root.shellAccentIconColor
                     }
 
                     NText {
                       text: KDEConnect.mainDevice.verificationKey
                       pointSize: Style.fontSizeL
                       font.weight: Style.fontWeightBold
-                      color: "#fff4ed"
+                      color: root.shellAccentTextColor
                     }
                   }
                 }
@@ -2607,7 +2728,7 @@ Item {
                   visible: KDEConnect.mainDevice.pairRequested
                   text: root.trSafe("panel.pair-waiting", "Waiting for the phone to accept the pairing request.")
                   pointSize: Style.fontSizeS
-                  color: "#bda99e"
+                  color: root.shellSecondaryTextColor
                   horizontalAlignment: Text.AlignHCenter
                   wrapMode: Text.WordWrap
                 }
@@ -2628,7 +2749,7 @@ Item {
           Layout.fillWidth: true
           Layout.fillHeight: true
           Layout.minimumHeight: implicitHeight
-          color: "#1c1517"
+          color: root.shellStageColor
           radius: 24 * Style.uiScaleRatio
           implicitHeight: setupRequiredContent.implicitHeight + (Style.marginL * 2.4)
 
@@ -2644,7 +2765,7 @@ Item {
               text: root.trSafe("panel.setup-required.phone-name", "Android Phone")
               pointSize: Style.fontSizeXXL
               font.weight: Style.fontWeightBold
-              color: "#fff4ed"
+              color: root.shellPrimaryTextColor
               Layout.fillWidth: true
               horizontalAlignment: Text.AlignHCenter
             }
@@ -2653,10 +2774,10 @@ Item {
               Layout.fillWidth: true
               Layout.fillHeight: true
               Layout.minimumHeight: setupRequiredColumn.implicitHeight + (Style.marginL * 1.8)
-              color: "#241b1d"
+              color: root.shellCardColor
               radius: 20 * Style.uiScaleRatio
               border.width: Style.borderS
-              border.color: "#6c4c3e"
+              border.color: root.shellCardBorderColor
 
               ColumnLayout {
                 id: setupRequiredColumn
@@ -2677,15 +2798,15 @@ Item {
                       width: 48 * Style.uiScaleRatio
                       height: width
                       radius: width / 2
-                      color: "#2f231c"
+                      color: root.shellIconChipColor
                       border.width: Style.borderS
-                      border.color: "#6c4c3e"
+                      border.color: root.shellIconChipBorderColor
 
                       NIcon {
                         anchors.centerIn: parent
                         icon: "device-mobile-off"
                         pointSize: Style.fontSizeXL
-                        color: "#f4ae89"
+                        color: root.shellIconChipFgColor
                       }
                     }
 
@@ -2696,13 +2817,13 @@ Item {
                         text: root.trSafe("panel.setup-required.title", "Finish Setup to Connect")
                         pointSize: Style.fontSizeL * 1.06
                         font.weight: Style.fontWeightBold
-                        color: "#fff4ed"
+                        color: root.shellPrimaryTextColor
                       }
 
                       NText {
                         text: root.trSafe("panel.setup-required.subtitle", "Link the phone first, then the mirror controls and status will appear here.")
                         pointSize: Style.fontSizeS * 1.02
-                        color: "#cdb7ab"
+                        color: root.shellSecondaryTextColor
                         wrapMode: Text.WordWrap
                       }
                     }
@@ -2712,7 +2833,7 @@ Item {
                 NText {
                   Layout.fillWidth: true
                   text: root.setupRequiredPairingStepText()
-                  color: "#d9c8bb"
+                  color: root.shellSecondaryTextColor
                   horizontalAlignment: Text.AlignHCenter
                   wrapMode: Text.WordWrap
                 }
@@ -2720,7 +2841,7 @@ Item {
                 NText {
                   Layout.fillWidth: true
                   text: root.setupRequiredAdbStepText()
-                  color: "#d9c8bb"
+                  color: root.shellSecondaryTextColor
                   horizontalAlignment: Text.AlignHCenter
                   wrapMode: Text.WordWrap
                 }
@@ -2728,7 +2849,7 @@ Item {
                 NText {
                   Layout.fillWidth: true
                   text: root.setupRequiredLoopbackStepText()
-                  color: "#d9c8bb"
+                  color: root.shellSecondaryTextColor
                   horizontalAlignment: Text.AlignHCenter
                   wrapMode: Text.WordWrap
                 }
@@ -2746,10 +2867,10 @@ Item {
                 Rectangle {
                   Layout.alignment: Qt.AlignHCenter
                   visible: root.mainDevicePairingInProgress() && String(KDEConnect.mainDevice?.verificationKey || "").trim() !== ""
-                  color: "#2e2220"
+                  color: root.shellAccentCardColor
                   radius: 14 * Style.uiScaleRatio
                   border.width: Style.borderS
-                  border.color: "#7d5b4e"
+                  border.color: root.shellAccentCardBorderColor
                   implicitWidth: setupVerificationRow.implicitWidth + (Style.marginM * 1.4)
                   implicitHeight: setupVerificationRow.implicitHeight + (Style.marginS * 1.4)
 
@@ -2761,14 +2882,14 @@ Item {
                     NIcon {
                       icon: "key"
                       pointSize: Style.fontSizeL
-                      color: "#f4d0be"
+                      color: root.shellAccentIconColor
                     }
 
                     NText {
                       text: KDEConnect.mainDevice?.verificationKey || ""
                       pointSize: Style.fontSizeL
                       font.weight: Style.fontWeightBold
-                      color: "#fff4ed"
+                      color: root.shellAccentTextColor
                     }
                   }
                 }
@@ -2784,7 +2905,7 @@ Item {
                   Layout.fillWidth: true
                   visible: root.mainDevicePairingInProgress()
                   text: root.trSafe("panel.setup-required.pair-waiting", "Approve the KDE Connect pairing request on the phone to continue.")
-                  color: "#d9c8bb"
+                  color: root.shellSecondaryTextColor
                   horizontalAlignment: Text.AlignHCenter
                   wrapMode: Text.WordWrap
                 }
@@ -2793,10 +2914,10 @@ Item {
                   Layout.alignment: Qt.AlignHCenter
                   Layout.fillWidth: true
                   visible: root.setupRequiredLoopbackCommandVisible()
-                  color: "#2b211d"
+                  color: root.shellNestedCardColor
                   radius: 14 * Style.uiScaleRatio
                   border.width: Style.borderS
-                  border.color: "#7d5b4e"
+                  border.color: root.shellNestedCardBorderColor
                   implicitHeight: loopbackCommandColumn.implicitHeight + (Style.marginM * 1.2)
 
                   ColumnLayout {
@@ -2812,14 +2933,14 @@ Item {
                       NIcon {
                         icon: "copy"
                         pointSize: Style.fontSizeM
-                        color: "#f4d0be"
+                        color: root.shellAccentIconColor
                       }
 
                       NText {
                         Layout.fillWidth: true
                         text: root.trSafe("panel.setup-required.command-label", "Click to copy the loopback setup command")
                         pointSize: Style.fontSizeS
-                        color: "#f0d8ca"
+                        color: root.shellAccentTextColor
                         wrapMode: Text.WordWrap
                       }
                     }
@@ -2828,7 +2949,7 @@ Item {
                       Layout.fillWidth: true
                       text: root.embeddedMirrorLoopbackSetupCommand
                       pointSize: Style.fontSizeXS
-                      color: "#fff4ed"
+                      color: root.shellPrimaryTextColor
                       wrapMode: Text.WrapAnywhere
                       font.family: "monospace"
                     }
@@ -3168,7 +3289,7 @@ Item {
                 Layout.preferredWidth: 176 * Style.uiScaleRatio
                 Layout.preferredHeight: 176 * Style.uiScaleRatio
                 radius: Style.radiusM
-                color: "#ffffff"
+                color: Color.mSurface
                 border.color: Qt.rgba(Color.mOutline.r, Color.mOutline.g, Color.mOutline.b, 0.5)
                 border.width: Style.borderS
 
@@ -3186,7 +3307,7 @@ Item {
                   width: parent.width - (Style.marginM * 2)
                   text: root.trSafe("panel.wireless-adb.qr-placeholder", "Tap Start QR to generate a pairing code.")
                   visible: root.wirelessAdbQrImageSource() === ""
-                  color: "#4b5563"
+                  color: Color.mOnSurfaceVariant
                   horizontalAlignment: Text.AlignHCenter
                   wrapMode: Text.WordWrap
                 }
@@ -3209,7 +3330,7 @@ Item {
                     : (root.wirelessAdbQrImageSource() !== ""
                         ? root.trSafe("panel.wireless-adb.qr-refresh-button", "Refresh QR")
                         : root.trSafe("panel.wireless-adb.qr-button", "Start QR Pairing"))
-                  icon: "view-barcode-qr"
+                            icon: "qrcode"
                   enabled: !wirelessAdbQrEncodeProc.running && !KDEConnect.wirelessAdbBusy
                   onClicked: root.beginWirelessAdbQrPairing()
                 }

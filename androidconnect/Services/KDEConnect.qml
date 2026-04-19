@@ -4,6 +4,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import qs.Services.System
 import qs.Services.UI
 
 QtObject {
@@ -25,6 +26,7 @@ QtObject {
   property bool scrcpyLaunching: false
   property bool scrcpyStopRequested: false
   property var scrcpyCommandArgs: []
+  property var scrcpyPendingCommandArgs: []
   property string scrcpyLaunchError: ""
   property string scrcpyLastStderr: ""
   property string scrcpyDeviceId: ""
@@ -49,6 +51,35 @@ QtObject {
   property int adbScreenHeight: 0
   property string adbScreenSerial: ""
   property string adbScreenError: ""
+  property string adbScreenStateSerial: ""
+  property string adbScreenStateKnownSerial: ""
+  property string adbScreenStateRaw: ""
+  property string adbScreenStateError: ""
+  property string adbScreenLockState: "unknown"
+  property bool adbScreenInteractive: false
+  property bool adbUnlockNeeded: true
+  property string adbScreenTimeoutSerial: ""
+  property string adbScreenTimeoutKnownSerial: ""
+  property string adbScreenTimeoutRaw: ""
+  property string adbScreenTimeoutError: ""
+  property string adbScreenTimeoutValue: ""
+  property string adbScreenBrightnessSerial: ""
+  property string adbScreenBrightnessKnownSerial: ""
+  property string adbScreenBrightnessRaw: ""
+  property string adbScreenBrightnessError: ""
+  property string adbScreenBrightnessValue: ""
+  property string adbScreenBrightnessMode: ""
+  property string adbScreenshotSerial: ""
+  property string adbScreenshotPath: ""
+  property string adbScreenshotError: ""
+  readonly property bool adbScreenshotBusy: adbScreenshotProc.running
+  property string adbScreenRecordingSerial: ""
+  property string adbScreenRecordingRemotePath: ""
+  property string adbScreenRecordingLocalPath: ""
+  property string adbScreenRecordingError: ""
+  property bool adbScreenRecordingStopRequested: false
+  readonly property bool adbScreenRecordingActive: adbScreenRecordingProc.running
+  readonly property bool adbScreenRecordingBusy: adbScreenRecordingProc.running || adbScreenRecordingFinalizeProc.running || adbScreenRecordingStopProc.running
   property string adbQueuedSerial: ""
   property var adbQueuedArgs: []
   property string adbQueuedKind: ""
@@ -59,10 +90,13 @@ QtObject {
   readonly property int refreshIntervalMs: reduceBackgroundRefresh ? 20000 : 5000
   property double scrcpyLaunchStartedAtMs: 0
 
-  property bool anyDevicesConnected: false;
+  property bool anyDevicesConnected: false
 
   signal wirelessAdbFinished(bool success, string message)
   signal adbDevicesRefreshed()
+  signal adbScreenStateRefreshed(string serial, bool unlockNeeded, bool interactive, string lockState)
+  signal adbScreenTimeoutRead(string serial, string value, bool success)
+  signal adbScreenBrightnessRead(string serial, string mode, string value, bool success)
 
   onDevicesChanged: {
     setMainDevice(root.mainDeviceId)
@@ -151,36 +185,155 @@ QtObject {
   }
 
   function triggerFindMyPhone(deviceId: string): void {
-    const proc = findMyPhoneComponent.createObject(root, { deviceId: deviceId });
-    proc.running = true;
+    startProcessComponent(findMyPhoneComponent, { deviceId: deviceId });
   }
 
   function browseFiles(deviceId: string): void {
-    const proc = browseFilesComponent.createObject(root, { deviceId: deviceId });
-    proc.running = true;
+    startProcessComponent(browseFilesComponent, { deviceId: deviceId });
   }
 
   // Share a file with a device
   function shareFile(deviceId: string, filePath: string): void {
-    var proc = shareComponent.createObject(root, {
+    startProcessComponent(shareComponent, {
       deviceId: deviceId,
       fileUrl: normalizedFileShareUrl(filePath)
     });
-    proc.running = true;
   }
 
   function requestPairing(deviceId: string): void {
-    const proc = requestPairingComponent.createObject(root, { deviceId: deviceId });
-    proc.running = true;
+    startProcessComponent(requestPairingComponent, { deviceId: deviceId });
   }
 
   function unpairDevice(deviceId: string): void {
-    const proc = unpairingComponent.createObject(root, { deviceId: deviceId });
-    proc.running = true;
+    startProcessComponent(unpairingComponent, { deviceId: deviceId });
   }
 
   function wakeUpDevice(deviceId: string): void {
-    const proc = wakeUpDeviceComponent.createObject(root, { deviceId: deviceId });
+    startProcessComponent(wakeUpDeviceComponent, { deviceId: deviceId });
+  }
+
+  function formatActionFailure(action: string, stderrText: string, exitCode: int): string {
+    const actionLabel = String(action || "").trim() !== "" ? String(action).trim() : "Operation";
+    const details = String(stderrText || "").trim();
+
+    if (details !== "")
+      return actionLabel + " failed: " + details;
+
+    if (exitCode !== 0)
+      return actionLabel + " failed (exit code " + exitCode + ").";
+
+    return actionLabel + " failed.";
+  }
+
+  function escapeNotificationMarkdown(text: string): string {
+    return String(text || "")
+      .replace(/\\/g, "\\\\")
+      .replace(/\[/g, "\\[")
+      .replace(/\]/g, "\\]")
+      .replace(/\(/g, "\\(")
+      .replace(/\)/g, "\\)")
+      .replace(/\*/g, "\\*")
+      .replace(/_/g, "\\_")
+      .replace(/`/g, "\\`");
+  }
+
+  function notificationFileUrl(path: string): string {
+    const trimmedPath = String(path || "").trim();
+    if (trimmedPath === "")
+      return "";
+
+    const encodedSegments = trimmedPath.split("/").map(segment => encodeURIComponent(segment));
+    return "file://" + encodedSegments.join("/");
+  }
+
+  function notificationParentDirectory(path: string): string {
+    const trimmedPath = String(path || "").trim();
+    const lastSlash = trimmedPath.lastIndexOf("/");
+    if (lastSlash <= 0)
+      return "";
+    return trimmedPath.slice(0, lastSlash);
+  }
+
+  function notificationHistoryLink(label: string, path: string): string {
+    const fileUrl = notificationFileUrl(path);
+    if (fileUrl === "")
+      return "";
+    return "[" + escapeNotificationMarkdown(label) + "](" + fileUrl + ")";
+  }
+
+  function notificationHistoryId(prefix: string): string {
+    const trimmedPrefix = String(prefix || "androidconnect").trim();
+    const safePrefix = trimmedPrefix !== ""
+      ? trimmedPrefix.replace(/[^a-zA-Z0-9_-]+/g, "-")
+      : "androidconnect";
+    return safePrefix + "-" + String(Date.now()) + "-" + String(Math.random()).slice(2, 8);
+  }
+
+  function addHistoryNotification(summary: string, body: string, urgency = 1, options = {}): void {
+    const resolvedSummary = String(summary || "").trim();
+    const resolvedBody = String(body || "").trim();
+    const resolvedOptions = options && typeof options === "object" ? options : ({});
+    const fallbackSummary = resolvedSummary !== "" ? resolvedSummary : "AndroidConnect";
+    const fallbackBody = resolvedBody !== "" ? resolvedBody : fallbackSummary;
+
+    NotificationService.addToHistory({
+      id: notificationHistoryId(resolvedOptions.idPrefix || "androidconnect"),
+      summary: fallbackSummary,
+      summaryMarkdown: String(resolvedOptions.summaryMarkdown || "").trim() || escapeNotificationMarkdown(fallbackSummary),
+      body: fallbackBody,
+      bodyMarkdown: String(resolvedOptions.bodyMarkdown || "").trim() || escapeNotificationMarkdown(fallbackBody),
+      appName: String(resolvedOptions.appName || "AndroidConnect"),
+      urgency: urgency < 0 || urgency > 2 ? 1 : urgency,
+      expireTimeout: 0,
+      timestamp: new Date(),
+      originalImage: "",
+      cachedImage: "",
+      actionsJson: "[]",
+      originalId: 0
+    });
+  }
+
+  function showNoticeWithHistory(summary: string, body: string, icon = "", timeout = 3200, options = {}): void {
+    ToastService.showNotice(summary, body, icon, timeout);
+    addHistoryNotification(summary, body, 1, options);
+  }
+
+  function showWarningWithHistory(summary: string, body: string, timeout = 5000, options = {}): void {
+    ToastService.showWarning(summary, body, timeout);
+    addHistoryNotification(summary, body, 1, options);
+  }
+
+  function showErrorWithHistory(message: string, options = {}): void {
+    const resolvedOptions = options && typeof options === "object" ? options : ({});
+    const summary = String(resolvedOptions.summary || "AndroidConnect").trim() || "AndroidConnect";
+    const body = String(message || "").trim() || summary;
+    ToastService.showError(body);
+    addHistoryNotification(summary, body, 2, resolvedOptions);
+  }
+
+  function savedMediaNotificationOptions(title: string, outputPath: string, idPrefix: string): var {
+    const directoryPath = notificationParentDirectory(outputPath);
+    const directoryLink = notificationHistoryLink("Open folder", directoryPath);
+    const linkedTitle = notificationHistoryLink(title, directoryPath);
+    const escapedPath = escapeNotificationMarkdown(outputPath);
+
+    return {
+      idPrefix: idPrefix,
+      summaryMarkdown: linkedTitle !== "" ? linkedTitle : escapeNotificationMarkdown(title),
+      bodyMarkdown: directoryLink !== ""
+        ? escapedPath + "\n\n" + directoryLink
+        : escapedPath
+    };
+  }
+
+  function notifyActionFailure(action: string, stderrText: string, exitCode: int): void {
+    const message = formatActionFailure(action, stderrText, exitCode);
+    Logger.w("KDEConnect", message);
+    showErrorWithHistory(message);
+  }
+
+  function startProcessComponent(component, properties = {}): void {
+    const proc = component.createObject(root, properties);
     proc.running = true;
   }
 
@@ -223,16 +376,23 @@ QtObject {
       launchSerial = root.usbSelectionSentinel;
     scrcpyActiveSerial = launchSerial;
     scrcpyLaunchStartedAtMs = Date.now();
-    scrcpyCommandArgs = parsedCommand.args;
-    Logger.i("KDEConnect", "Launching scrcpy session:",
+    scrcpyCommandArgs = [];
+    scrcpyPendingCommandArgs = parsedCommand.args;
+    Logger.i("KDEConnect", "Preparing scrcpy session:",
       "deviceId=" + scrcpyDeviceId,
       "serial=" + (isUsbSelectionSerial(launchSerial) ? "usb" : launchSerial),
       "program=" + String(parsedCommand.args[0] || ""));
-    scrcpySessionProc.running = true;
+    scrcpyPreLaunchProc.running = true;
     return true;
   }
 
   function stopScrcpySession(): void {
+    if (scrcpyPreLaunchProc.running) {
+      scrcpyStopRequested = true;
+      scrcpyPreLaunchProc.signal(15);
+      return;
+    }
+
     if (!scrcpyRunning)
       return;
 
@@ -243,7 +403,7 @@ QtObject {
   function forceStopScrcpyProcesses(feedDevicePath: string): void {
     scrcpyCleanupFeedDevicePath = String(feedDevicePath || "").trim();
 
-    if (scrcpyRunning)
+    if (scrcpyRunning || scrcpyPreLaunchProc.running)
       stopScrcpySession();
 
     if (!scrcpyCleanupProc.running)
@@ -258,7 +418,7 @@ QtObject {
     return String(commandString || "").replace(/\s+/g, " ").trim();
   }
 
-  function parseCommandArgs(commandString: string) {
+  function parseCommandArgs(commandString: string): var {
     const source = String(commandString || "").trim();
     const parsedArgs = [];
     let current = "";
@@ -353,29 +513,6 @@ QtObject {
       return normalizeShellCommand(commandString);
 
     return normalizeShellCommand(commandString + " " + optionText);
-  }
-
-  function applyMirrorPerformancePreset(commandString: string, presetName: string): string {
-    let command = normalizeShellCommand(commandString);
-    const preset = String(presetName || "").trim().toLowerCase();
-    let bitrateOption = "--video-bit-rate=8M";
-    let maxFpsOption = "--max-fps=60";
-
-    if (command === "")
-      return "";
-
-    if (preset === "quality") {
-      bitrateOption = "--video-bit-rate=10M";
-    } else if (preset === "latency") {
-      bitrateOption = "--video-bit-rate=6M";
-      maxFpsOption = "--max-fps=60";
-    }
-
-    command = appendScrcpyOption(command, /(^|\s)--max-fps(?:=\S+|\s+\S+)\b/, maxFpsOption);
-    command = appendScrcpyOption(command, /(^|\s)(?:-b|--video-bit-rate)(?:=\S+|\s+\S+)\b/, bitrateOption);
-    command = appendScrcpyOption(command, /(^|\s)--video-codec(?:=\S+|\s+\S+)\b/, "--video-codec=h264");
-    command = appendScrcpyOption(command, /(^|\s)--v4l2-buffer(?:=\S+|\s+\S+)\b/, "--v4l2-buffer=0");
-    return command;
   }
 
   function applyConfiguredMirrorAudioMode(commandString: string, audioEnabled: bool): string {
@@ -611,18 +748,100 @@ QtObject {
     ]);
   }
 
-  function adbCommand(serial: string, args) {
-    let command = ["adb"];
-    const trimmedSerial = (serial || "").trim();
-    if (isUsbSelectionSerial(trimmedSerial))
-      command = command.concat(["-d"]);
-    else if (trimmedSerial !== "")
-      command = command.concat(["-s", trimmedSerial]);
-
-    return command.concat(args.map(arg => String(arg)));
+  function adbCommand(serial: string, args): var {
+    return ["adb"]
+      .concat(adbSelectorArgsForSerial(serial))
+      .concat(args.map(arg => String(arg)));
   }
 
-  function shellJoinArgs(args) {
+  function buildOutputPath(directoryName: string, filePrefix: string, extension: string): string {
+    const homeDir = String(Quickshell.env("HOME") || "").trim();
+    const baseDir = homeDir !== ""
+      ? (homeDir + "/" + String(directoryName || "").trim() + "/AndroidConnect")
+      : "/tmp/AndroidConnect";
+    const stamp = Qt.formatDateTime(new Date(), "yyyyMMdd-HHmmss");
+    return baseDir + "/" + String(filePrefix || "capture").trim() + "-" + stamp + String(extension || "");
+  }
+
+  function takeAdbScreenshot(serial: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    if (trimmedSerial === "" || adbScreenshotProc.running)
+      return false;
+
+    adbScreenshotSerial = trimmedSerial;
+    adbScreenshotPath = buildOutputPath("Pictures", "androidconnect-screenshot", ".png");
+    adbScreenshotError = "";
+    adbScreenshotProc.running = true;
+    return true;
+  }
+
+  function startAdbScreenRecording(serial: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    if (trimmedSerial === "" || adbScreenRecordingBusy)
+      return false;
+
+    const stamp = Qt.formatDateTime(new Date(), "yyyyMMdd-HHmmss");
+    adbScreenRecordingSerial = trimmedSerial;
+    adbScreenRecordingRemotePath = "/sdcard/Download/androidconnect-recording-" + stamp + ".mp4";
+    adbScreenRecordingLocalPath = buildOutputPath("Videos", "androidconnect-recording", ".mp4");
+    adbScreenRecordingError = "";
+    adbScreenRecordingStopRequested = false;
+    adbScreenRecordingProc.running = true;
+    showNoticeWithHistory("Screen Recording", "Recording started.", "video");
+    Logger.i("KDEConnect", "ADB screen recording started:",
+      "serial=" + adbScreenRecordingSerial,
+      "remote=" + adbScreenRecordingRemotePath,
+      "local=" + adbScreenRecordingLocalPath);
+    return true;
+  }
+
+  function stopAdbScreenRecording(): bool {
+    if (!adbScreenRecordingProc.running || adbScreenRecordingStopProc.running)
+      return false;
+
+    adbScreenRecordingStopRequested = true;
+    adbScreenRecordingStopProc.running = true;
+    return true;
+  }
+
+  function adbSelectorArgsForSerial(serial: string): var {
+    const trimmedSerial = String(serial || "").trim();
+    if (isUsbSelectionSerial(trimmedSerial))
+      return ["-d"];
+    if (trimmedSerial !== "")
+      return ["-s", trimmedSerial];
+    return [];
+  }
+
+  function buildScrcpyPreLaunchCommand(serial: string, feedDevicePath: string): var {
+    const adbPrefix = shellJoinArgs(["adb"].concat(adbSelectorArgsForSerial(serial)));
+    const device = String(feedDevicePath || "").trim();
+    const preLaunchStateScript = [
+      "power=$(dumpsys power 2>/dev/null || true)",
+      "policy=$(dumpsys window policy 2>/dev/null || true)",
+      "interactive=false",
+      "if printf '%s\\n' \"$power\" | grep -Eq 'mWakefulness=Awake|mInteractive=true|Display Power: state=ON'; then interactive=true; fi",
+      "locked=unknown",
+      "if printf '%s\\n' \"$policy\" | grep -Eq 'showing=true|mShowingLockscreen=true|isStatusBarKeyguard=true'; then locked=true;"
+        + " elif printf '%s\\n' \"$policy\" | grep -Eq 'showing=false|mShowingLockscreen=false|isStatusBarKeyguard=false'; then locked=false; fi",
+      "if [ \"$interactive\" != true ]; then input keyevent KEYCODE_WAKEUP >/dev/null 2>&1 || true; sleep 0.05; fi",
+      "if [ \"$locked\" = true ]; then input keyevent 82 >/dev/null 2>&1 || true; sleep 0.10; fi",
+    ].join("; ");
+    const script = [
+      "device=" + shellQuote(device),
+      "for pid in $(pgrep -x scrcpy || true); do",
+      "  cmd=$(tr '\\0' '\\n' </proc/$pid/cmdline 2>/dev/null || true)",
+      "  if [ -n \"$device\" ] && printf '%s\\n' \"$cmd\" | grep -Fqx -- \"--v4l2-sink=$device\"; then",
+      "    kill -TERM \"$pid\" 2>/dev/null || true",
+      "  fi",
+      "done",
+      adbPrefix + " shell sh -c " + shellQuote(preLaunchStateScript) + " >/dev/null 2>&1 || true"
+    ].join("\n");
+
+    return ["sh", "-lc", script];
+  }
+
+  function shellJoinArgs(args): string {
     return (Array.isArray(args) ? args : []).map(arg => shellQuote(String(arg))).join(" ");
   }
 
@@ -707,6 +926,189 @@ QtObject {
     adbDisplayInfoStderr = "";
     adbScreenError = "";
     return queueAdbTask("display-info", trimmedSerial, ["shell", "wm", "size"]);
+  }
+
+  function hasFreshAdbScreenState(serial: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    return trimmedSerial !== ""
+      && adbScreenStateKnownSerial === trimmedSerial
+      && adbScreenStateError === "";
+  }
+
+  function hasFreshAdbScreenTimeout(serial: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    return trimmedSerial !== ""
+      && adbScreenTimeoutKnownSerial === trimmedSerial
+      && adbScreenTimeoutError === "";
+  }
+
+  function hasFreshAdbScreenBrightness(serial: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    return trimmedSerial !== ""
+      && adbScreenBrightnessKnownSerial === trimmedSerial
+      && adbScreenBrightnessError === "";
+  }
+
+  function queryAdbScreenState(serial: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    if (trimmedSerial === ""
+        || adbScreenStateSerial !== ""
+        || hasQueuedAdbTask("screen-state", trimmedSerial))
+      return false;
+
+    adbScreenStateSerial = trimmedSerial;
+    adbScreenStateKnownSerial = "";
+    adbScreenStateRaw = "";
+    adbScreenStateError = "";
+    return queueAdbTask("screen-state", trimmedSerial, [
+      "shell",
+      "sh",
+      "-c",
+      "power=$(dumpsys power 2>/dev/null || true)"
+      + "; policy=$(dumpsys window policy 2>/dev/null || true)"
+      + "; interactive=false"
+      + "; if printf '%s\\n' \"$power\" | grep -Eq 'mWakefulness=Awake|mInteractive=true|Display Power: state=ON'; then interactive=true; fi"
+      + "; locked=unknown"
+      + "; if printf '%s\\n' \"$policy\" | grep -Eq 'showing=true|mShowingLockscreen=true|isStatusBarKeyguard=true'; then locked=true;"
+      + " elif printf '%s\\n' \"$policy\" | grep -Eq 'showing=false|mShowingLockscreen=false|isStatusBarKeyguard=false'; then locked=false; fi"
+      + "; unlockNeeded=false"
+      + "; if [ \"$locked\" = true ]; then unlockNeeded=true; fi"
+      + "; printf 'interactive=%s\\nlocked=%s\\nunlockNeeded=%s\\n' \"$interactive\" \"$locked\" \"$unlockNeeded\""
+    ]);
+  }
+
+  function queryAdbScreenTimeout(serial: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    if (trimmedSerial === ""
+        || adbScreenTimeoutSerial !== ""
+        || hasQueuedAdbTask("screen-timeout", trimmedSerial))
+      return false;
+
+    adbScreenTimeoutSerial = trimmedSerial;
+    adbScreenTimeoutKnownSerial = "";
+    adbScreenTimeoutRaw = "";
+    adbScreenTimeoutError = "";
+    adbScreenTimeoutValue = "";
+    return queueAdbTask("screen-timeout", trimmedSerial, [
+      "shell",
+      "sh",
+      "-c",
+      "settings get system screen_off_timeout 2>/dev/null || true"
+    ]);
+  }
+
+  function queryAdbScreenBrightness(serial: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    if (trimmedSerial === ""
+        || adbScreenBrightnessSerial !== ""
+        || hasQueuedAdbTask("screen-brightness", trimmedSerial))
+      return false;
+
+    adbScreenBrightnessSerial = trimmedSerial;
+    adbScreenBrightnessKnownSerial = "";
+    adbScreenBrightnessRaw = "";
+    adbScreenBrightnessError = "";
+    adbScreenBrightnessValue = "";
+    adbScreenBrightnessMode = "";
+    return queueAdbTask("screen-brightness", trimmedSerial, [
+      "shell",
+      "sh",
+      "-c",
+      "brightness=$(settings get system screen_brightness 2>/dev/null || true)"
+      + "; mode=$(settings get system screen_brightness_mode 2>/dev/null || true)"
+      + "; printf 'brightness=%s\\nmode=%s\\n' \"$brightness\" \"$mode\""
+    ]);
+  }
+
+  function setAdbScreenTimeout(serial: string, timeoutValue: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    const trimmedValue = String(timeoutValue || "").trim();
+    if (trimmedSerial === "" || trimmedValue === "")
+      return false;
+
+    return queueAdbTask("screen-timeout-set", trimmedSerial, [
+      "shell",
+      "settings",
+      "put",
+      "system",
+      "screen_off_timeout",
+      trimmedValue
+    ]);
+  }
+
+  function setAdbScreenBrightness(serial: string, brightnessValue: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    const trimmedBrightness = String(brightnessValue || "").trim();
+    if (trimmedSerial === "" || trimmedBrightness === "")
+      return false;
+
+    let normalizedBrightness = Number(trimmedBrightness);
+    if (!isFinite(normalizedBrightness))
+      return false;
+
+    normalizedBrightness = Math.max(0, Math.min(255, normalizedBrightness));
+
+    return queueAdbTask("screen-brightness-set", trimmedSerial, [
+      "shell",
+      "cmd",
+      "display",
+      "set-brightness",
+      (normalizedBrightness / 255).toFixed(4)
+    ]);
+  }
+
+  function restoreAdbScreenTimeout(serial: string, timeoutValue: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    const trimmedValue = String(timeoutValue || "").trim();
+    if (trimmedSerial === "")
+      return false;
+
+    if (/^\d+$/.test(trimmedValue))
+      return setAdbScreenTimeout(trimmedSerial, trimmedValue);
+
+    return queueAdbTask("screen-timeout-restore", trimmedSerial, [
+      "shell",
+      "settings",
+      "delete",
+      "system",
+      "screen_off_timeout"
+    ]);
+  }
+
+  function restoreAdbScreenBrightness(serial: string, modeValue: string, brightnessValue: string): bool {
+    const trimmedSerial = String(serial || "").trim();
+    const trimmedMode = String(modeValue || "").trim();
+    const trimmedBrightness = String(brightnessValue || "").trim();
+    if (trimmedSerial === "")
+      return false;
+
+    if (trimmedMode === "1") {
+      return queueAdbTask("screen-brightness-restore", trimmedSerial, [
+        "shell",
+        "cmd",
+        "display",
+        "reset-brightness-configuration"
+      ]);
+    }
+
+    if (/^\d+$/.test(trimmedBrightness)) {
+      let normalizedBrightness = Number(trimmedBrightness);
+      normalizedBrightness = Math.max(0, Math.min(255, normalizedBrightness));
+      return queueAdbTask("screen-brightness-restore", trimmedSerial, [
+        "shell",
+        "cmd",
+        "display",
+        "set-brightness",
+        (normalizedBrightness / 255).toFixed(4)
+      ]);
+    }
+
+    return queueAdbTask("screen-brightness-restore", trimmedSerial, [
+      "shell",
+      "cmd",
+      "display",
+      "reset-brightness-configuration"
+    ]);
   }
 
   function runAdbTap(serial: string, x: int, y: int): bool {
@@ -840,7 +1242,7 @@ QtObject {
   function notifyProcessFailure(action: string, deviceId: string, stderrText: string, exitCode: int): void {
     const message = formatProcessFailure(action, deviceId, stderrText, exitCode);
     Logger.w("KDEConnect", message);
-    ToastService.showError(message);
+    showErrorWithHistory(message);
   }
 
   property Process detectBusctlProc: Process {
@@ -1342,6 +1744,80 @@ QtObject {
         }
 
         root.adbDisplayInfoSerial = "";
+      } else if (commandKind === "screen-state") {
+        root.adbScreenStateRaw = stdoutText;
+
+        if (exitCode === 0) {
+          const interactiveMatch = stdoutText.match(/(?:^|\n)interactive=(true|false)/);
+          const lockedMatch = stdoutText.match(/(?:^|\n)locked=(true|false|unknown)/);
+          const unlockNeededMatch = stdoutText.match(/(?:^|\n)unlockNeeded=(true|false)/);
+
+          root.adbScreenInteractive = interactiveMatch ? interactiveMatch[1] === "true" : false;
+          root.adbScreenLockState = lockedMatch ? lockedMatch[1] : "unknown";
+          root.adbUnlockNeeded = unlockNeededMatch ? unlockNeededMatch[1] === "true" : true;
+          root.adbScreenStateKnownSerial = commandSerial;
+          root.adbScreenStateError = "";
+          root.adbScreenStateRefreshed(commandSerial, root.adbUnlockNeeded, root.adbScreenInteractive, root.adbScreenLockState);
+          Logger.i("KDEConnect", "ADB screen state:",
+            "serial=" + commandSerial,
+            "interactive=" + root.adbScreenInteractive,
+            "locked=" + root.adbScreenLockState,
+            "unlockNeeded=" + root.adbUnlockNeeded);
+        } else {
+          root.adbScreenStateKnownSerial = "";
+          root.adbScreenInteractive = false;
+          root.adbScreenLockState = "unknown";
+          root.adbUnlockNeeded = true;
+          root.adbScreenStateError = stderrText !== "" ? stderrText : ("adb screen state exited with code " + exitCode);
+          Logger.w("KDEConnect", "adb screen state failed:", root.adbScreenStateError);
+        }
+
+        root.adbScreenStateSerial = "";
+      } else if (commandKind === "screen-timeout") {
+        root.adbScreenTimeoutRaw = stdoutText;
+
+        if (exitCode === 0) {
+          root.adbScreenTimeoutValue = String(stdoutText || "").trim();
+          root.adbScreenTimeoutKnownSerial = commandSerial;
+          root.adbScreenTimeoutError = "";
+          root.adbScreenTimeoutRead(commandSerial, root.adbScreenTimeoutValue, true);
+          Logger.i("KDEConnect", "ADB screen timeout:",
+            "serial=" + commandSerial,
+            "value=" + root.adbScreenTimeoutValue);
+        } else {
+          root.adbScreenTimeoutKnownSerial = "";
+          root.adbScreenTimeoutValue = "";
+          root.adbScreenTimeoutError = stderrText !== "" ? stderrText : ("adb screen timeout exited with code " + exitCode);
+          root.adbScreenTimeoutRead(commandSerial, "", false);
+          Logger.w("KDEConnect", "adb screen timeout failed:", root.adbScreenTimeoutError);
+        }
+
+        root.adbScreenTimeoutSerial = "";
+      } else if (commandKind === "screen-brightness") {
+        root.adbScreenBrightnessRaw = stdoutText;
+
+        if (exitCode === 0) {
+          const brightnessMatch = stdoutText.match(/(?:^|\n)brightness=([^\n]*)/);
+          const modeMatch = stdoutText.match(/(?:^|\n)mode=([^\n]*)/);
+          root.adbScreenBrightnessValue = brightnessMatch ? String(brightnessMatch[1] || "").trim() : "";
+          root.adbScreenBrightnessMode = modeMatch ? String(modeMatch[1] || "").trim() : "";
+          root.adbScreenBrightnessKnownSerial = commandSerial;
+          root.adbScreenBrightnessError = "";
+          root.adbScreenBrightnessRead(commandSerial, root.adbScreenBrightnessMode, root.adbScreenBrightnessValue, true);
+          Logger.i("KDEConnect", "ADB screen brightness:",
+            "serial=" + commandSerial,
+            "mode=" + root.adbScreenBrightnessMode,
+            "brightness=" + root.adbScreenBrightnessValue);
+        } else {
+          root.adbScreenBrightnessKnownSerial = "";
+          root.adbScreenBrightnessValue = "";
+          root.adbScreenBrightnessMode = "";
+          root.adbScreenBrightnessError = stderrText !== "" ? stderrText : ("adb screen brightness exited with code " + exitCode);
+          root.adbScreenBrightnessRead(commandSerial, "", "", false);
+          Logger.w("KDEConnect", "adb screen brightness failed:", root.adbScreenBrightnessError);
+        }
+
+        root.adbScreenBrightnessSerial = "";
       } else if (exitCode !== 0) {
         Logger.w("KDEConnect", "ADB input command failed:",
           "kind=" + commandKind,
@@ -1351,6 +1827,205 @@ QtObject {
       }
 
       root.finishCurrentAdbTask();
+    }
+  }
+
+  property Process adbScreenshotProc: Process {
+    id: adbScreenshotProc
+    running: false
+    command: ["sh", "-lc",
+      "file=" + root.shellQuote(root.adbScreenshotPath)
+      + "; dir=$(dirname \"$file\")"
+      + "; mkdir -p \"$dir\""
+      + " && " + root.shellJoinArgs(root.adbCommand(root.adbScreenshotSerial, ["exec-out", "screencap", "-p"]))
+      + " > \"$file\""
+      + " && [ -s \"$file\" ]"
+      + " || { status=$?; rm -f \"$file\" 2>/dev/null || true; exit \"$status\"; }"
+    ]
+
+    stderr: StdioCollector {
+      onStreamFinished: {
+        root.adbScreenshotError = text.trim();
+      }
+    }
+
+    onExited: (exitCode, exitStatus) => {
+      const outputPath = root.adbScreenshotPath;
+      const errorText = root.adbScreenshotError;
+
+      if (exitCode === 0) {
+        showNoticeWithHistory(
+          "Screenshot Saved",
+          outputPath,
+          "camera",
+          3200,
+          savedMediaNotificationOptions("Screenshot Saved", outputPath, "androidconnect-screenshot")
+        );
+        Logger.i("KDEConnect", "ADB screenshot saved:", outputPath);
+      } else {
+        root.notifyActionFailure("Take screenshot", errorText, exitCode);
+      }
+
+      root.adbScreenshotSerial = "";
+      root.adbScreenshotPath = "";
+      root.adbScreenshotError = "";
+    }
+  }
+
+  property Process adbScreenRecordingProc: Process {
+    id: adbScreenRecordingProc
+    running: false
+    command: root.adbCommand(root.adbScreenRecordingSerial, [
+      "shell",
+      "screenrecord",
+      "--bit-rate",
+      "16000000",
+      root.adbScreenRecordingRemotePath
+    ])
+
+    stderr: StdioCollector {
+      onStreamFinished: {
+        root.adbScreenRecordingError = text.trim();
+      }
+    }
+
+    onExited: (exitCode, exitStatus) => {
+      if (root.adbScreenRecordingRemotePath !== "" && root.adbScreenRecordingLocalPath !== "") {
+        root.adbScreenRecordingFinalizeProc.running = true;
+        return;
+      }
+
+      if (exitCode !== 0)
+        root.notifyActionFailure("Screen recording", root.adbScreenRecordingError, exitCode);
+
+      root.adbScreenRecordingSerial = "";
+      root.adbScreenRecordingRemotePath = "";
+      root.adbScreenRecordingLocalPath = "";
+      root.adbScreenRecordingError = "";
+      root.adbScreenRecordingStopRequested = false;
+    }
+  }
+
+  property Process adbScreenRecordingStopProc: Process {
+    id: adbScreenRecordingStopProc
+    running: false
+    command: root.adbCommand(root.adbScreenRecordingSerial, [
+      "shell",
+      "sh",
+      "-c",
+      "pkill -INT -x screenrecord >/dev/null 2>&1"
+      + " || killall -2 screenrecord >/dev/null 2>&1"
+      + " || { pid=$(pidof screenrecord 2>/dev/null | awk '{print $1}'); [ -n \"$pid\" ] && kill -2 \"$pid\" >/dev/null 2>&1; }"
+    ])
+
+    stderr: StdioCollector {
+      onStreamFinished: {
+        const details = text.trim();
+        if (details !== "")
+          root.adbScreenRecordingError = details;
+      }
+    }
+
+    onExited: (exitCode, exitStatus) => {
+      if (exitCode !== 0 && root.adbScreenRecordingProc.running) {
+        root.adbScreenRecordingStopRequested = false;
+        root.notifyActionFailure("Stop screen recording", root.adbScreenRecordingError, exitCode);
+      }
+    }
+  }
+
+  property Process adbScreenRecordingFinalizeProc: Process {
+    id: adbScreenRecordingFinalizeProc
+    running: false
+    command: ["sh", "-lc",
+      "file=" + root.shellQuote(root.adbScreenRecordingLocalPath)
+      + "; remote=" + root.shellQuote(root.adbScreenRecordingRemotePath)
+      + "; dir=$(dirname \"$file\")"
+      + "; mkdir -p \"$dir\""
+      + " && " + root.shellJoinArgs(root.adbCommand(root.adbScreenRecordingSerial, ["pull", root.adbScreenRecordingRemotePath, root.adbScreenRecordingLocalPath])) + " >/dev/null"
+      + " && [ -s \"$file\" ]"
+      + " && " + root.shellJoinArgs(root.adbCommand(root.adbScreenRecordingSerial, ["shell", "rm", "-f", root.adbScreenRecordingRemotePath])) + " >/dev/null 2>&1"
+      + " || { status=$?; rm -f \"$file\" 2>/dev/null || true; exit \"$status\"; }"
+    ]
+
+    stderr: StdioCollector {
+      onStreamFinished: {
+        const details = text.trim();
+        if (details !== "")
+          root.adbScreenRecordingError = details;
+      }
+    }
+
+    onExited: (exitCode, exitStatus) => {
+      const outputPath = root.adbScreenRecordingLocalPath;
+
+      if (exitCode === 0) {
+        showNoticeWithHistory(
+          "Screen Recording Saved",
+          outputPath,
+          "video",
+          3200,
+          savedMediaNotificationOptions("Screen Recording Saved", outputPath, "androidconnect-recording")
+        );
+        Logger.i("KDEConnect", "ADB screen recording saved:", outputPath);
+      } else {
+        root.notifyActionFailure("Screen recording", root.adbScreenRecordingError, exitCode);
+      }
+
+      root.adbScreenRecordingSerial = "";
+      root.adbScreenRecordingRemotePath = "";
+      root.adbScreenRecordingLocalPath = "";
+      root.adbScreenRecordingError = "";
+      root.adbScreenRecordingStopRequested = false;
+    }
+  }
+
+  property Process scrcpyPreLaunchProc: Process {
+    id: scrcpyPreLaunchProc
+    running: false
+    command: root.buildScrcpyPreLaunchCommand(root.scrcpyActiveSerial, root.scrcpyFeedDevicePath)
+
+    stdout: StdioCollector {}
+
+    stderr: StdioCollector {
+      onStreamFinished: {
+        root.scrcpyLastStderr = text.trim();
+      }
+    }
+
+    onExited: (exitCode, exitStatus) => {
+      if (root.scrcpyStopRequested) {
+        root.scrcpyLaunching = false;
+        root.scrcpyStopRequested = false;
+        root.scrcpyCommandArgs = [];
+        root.scrcpyPendingCommandArgs = [];
+        root.scrcpyDeviceId = "";
+        root.scrcpyFeedDevicePath = "";
+        root.scrcpyActiveSerial = "";
+        root.scrcpyLaunchStartedAtMs = 0;
+        Logger.i("KDEConnect", "Stopped scrcpy launch before process start");
+        return;
+      }
+
+      if (exitCode !== 0) {
+        root.scrcpyLaunching = false;
+        root.scrcpyLaunchError = root.scrcpyLastStderr !== ""
+          ? root.scrcpyLastStderr
+          : ("scrcpy pre-launch failed with code " + exitCode);
+        root.scrcpyPendingCommandArgs = [];
+        Logger.e("KDEConnect", "scrcpy pre-launch failed:", root.scrcpyLaunchError);
+        return;
+      }
+
+      root.scrcpyCommandArgs = Array.isArray(root.scrcpyPendingCommandArgs)
+        ? root.scrcpyPendingCommandArgs
+        : [];
+      root.scrcpyPendingCommandArgs = [];
+      Logger.i("KDEConnect", "Launching scrcpy session:",
+        "deviceId=" + root.scrcpyDeviceId,
+        "serial=" + (root.isUsbSelectionSerial(root.scrcpyActiveSerial) ? "usb" : root.scrcpyActiveSerial),
+        "program=" + String(root.scrcpyCommandArgs[0] || ""));
+      root.scrcpySessionProc.running = true;
     }
   }
 
@@ -1400,6 +2075,7 @@ QtObject {
 
       root.scrcpyStopRequested = false;
       root.scrcpyCommandArgs = [];
+      root.scrcpyPendingCommandArgs = [];
       root.scrcpyDeviceId = "";
       root.scrcpyFeedDevicePath = "";
       root.scrcpyActiveSerial = "";
@@ -1407,6 +2083,24 @@ QtObject {
       root.adbScreenWidth = 0;
       root.adbScreenHeight = 0;
       root.adbScreenSerial = "";
+      root.adbScreenStateSerial = "";
+      root.adbScreenStateKnownSerial = "";
+      root.adbScreenStateRaw = "";
+      root.adbScreenStateError = "";
+      root.adbScreenLockState = "unknown";
+      root.adbScreenInteractive = false;
+      root.adbUnlockNeeded = true;
+      root.adbScreenTimeoutSerial = "";
+      root.adbScreenTimeoutKnownSerial = "";
+      root.adbScreenTimeoutRaw = "";
+      root.adbScreenTimeoutError = "";
+      root.adbScreenTimeoutValue = "";
+      root.adbScreenBrightnessSerial = "";
+      root.adbScreenBrightnessKnownSerial = "";
+      root.adbScreenBrightnessRaw = "";
+      root.adbScreenBrightnessError = "";
+      root.adbScreenBrightnessValue = "";
+      root.adbScreenBrightnessMode = "";
       root.adbDisplayInfoSerial = "";
       root.adbDisplayInfoStdout = "";
       root.adbDisplayInfoStderr = "";
