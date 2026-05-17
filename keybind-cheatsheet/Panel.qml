@@ -357,7 +357,7 @@ Item {
         Layout.fillWidth: true
         Layout.alignment: Qt.AlignVCenter
         text: itemData.desc
-        font.pointSize: 9
+        font.pointSize: Style.fontSizeXS
         color: Color.mOnSurface
         elide: Text.ElideRight
       }
@@ -368,7 +368,7 @@ Item {
         Layout.fillWidth: true
         Layout.alignment: Qt.AlignVCenter
         text: pluginApi?.tr("panel.no-description")
-        font.pointSize: 9
+        font.pointSize: Style.fontSizeXS
         font.italic: true
         color: Color.mOnSurfaceVariant
         elide: Text.ElideRight
