@@ -9,7 +9,8 @@
     "mango-not-supported": "MangoWC پشتگیری ناکرێت",
     "mango-detail": "فۆرماتی ڕێکخستنی MangoWC لەگەڵ ئەم پێوەکراوەدا گونجاو نییە",
     "unknown-compositor": "کۆمپۆزیتەرێکی نەناسراو دۆزرایەوە",
-    "unknown-detail": "ئەم پێوەکراوە تەنها کۆمپۆزیتەرەکانی Hyprland و Niri پشتگیری دەکات"
+    "unknown-detail": "ئەم پێوەکراوە تەنها کۆمپۆزیتەرەکانی Hyprland و Niri پشتگیری دەکات",
+    "hyprctl-failed": "hyprctl binds failed - is Hyprland running?"
   },
   "panel": {
     "loading": "Barkirin...",
@@ -19,7 +20,15 @@
     "workspace-switching": "QADÊN XEBATÊ - GUHEZTIN",
     "workspace-moving": "QADÊN XEBATÊ - VEGUHESTIN",
     "workspace-mouse": "QADÊN XEBATÊ - MIŞK",
-    "search-placeholder": "Bişkokan lêbigere..."
+    "search-placeholder": "Bişkokan lêbigere...",
+    "other": "Other",
+    "undescribed": "Without Description",
+    "no-description": "(no description)",
+    "add-description": "Add description",
+    "add-description-placeholder": "Description...",
+    "save-description": "Save",
+    "cancel": "Cancel",
+    "hide-bind": "Hide this bind"
   },
   "settings": {
     "title": "Mîhengên Kurterêyên Klavyeyê",
@@ -51,7 +60,18 @@
     "width-range": "px (400-3000)",
     "height-range": "px (300-2000)",
     "hyprland-path": "Rêça Hyprland",
-    "niri-path": "Rêça Niri"
+    "niri-path": "Rêça Niri",
+    "hyprland-lua-path": "Hyprland Lua Path",
+    "hyprland-parser-mode": "Parser:",
+    "hyprland-lua-hint": "Auto: uses hyprland.lua via `hyprctl binds` when it exists, otherwise the legacy .conf parser.",
+    "undescribed-title": "Undescribed Binds",
+    "show-undescribed": "Show binds without a description",
+    "show-undescribed-hint": "When enabled, binds with no description appear in a dedicated section where you can add a description or hide them.",
+    "overrides-summary": "Hidden: {hidden} - Custom descriptions: {custom}",
+    "restore-hidden": "Restore hidden",
+    "restore-hidden-message": "Hidden binds restored.",
+    "clear-overrides": "Clear all overrides",
+    "clear-overrides-message": "All bind overrides cleared."
   },
   "barwidget": {
     "tooltip": "Çavkaniya Kurterêyan",

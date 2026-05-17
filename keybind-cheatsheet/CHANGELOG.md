@@ -1,5 +1,34 @@
 # Changelog
 
+## [3.6.0] - 2026-05-17
+
+### Features
+
+**Hyprland Lua config support (`hyprland.lua`)**
+- Hyprland 0.55+ replaces hyprlang `.conf` with a Lua config. Added a second Hyprland parsing tor that queries `hyprctl binds -j` for the authoritative, already-evaluated bind list — correctly handling `require()`, `for` loops, and multi-key chords that cannot be recovered by static text parsing
+- Categories are recovered by lightly scanning `hyprland.lua` (and its `require()` modules) for `-- N. NAME` headers and `description = "..."` literals, with a prefix heuristic for loop-generated binds (e.g. `"Workspace " .. i`)
+- Parser mode setting `auto` / `lua` / `conf`: `auto` uses the Lua tor when `hyprland.lua` exists, otherwise the existing `.conf` parser
+- The legacy `.conf` parser is **kept unchanged as a fallback** for users still on hyprlang configs
+
+**Add description / hide binds without a description**
+- Binds with no description are now surfaced in a dedicated "Without Description" section instead of being dropped
+- Each undescribed bind can be given a custom description inline, or hidden, directly from the panel
+- Overrides are keyed by a stable bind identity (`submap|modmask|key|flags|dispatcher`) that excludes the unstable `__lua` registry ref, so they survive Hyprland restarts
+- New settings: `showUndescribedBinds` toggle, a hidden/custom-override summary, "Restore hidden" and "Clear all overrides" actions
+
+**`refresh` IPC**
+- Added `refresh` to the plugin IPC handler so the cheatsheet can be re-parsed from a keybind, e.g. `qs ipc call plugin:keybind-cheatsheet refresh`
+
+### Bug Fixes
+
+**Settings height field binding loop**
+- Fixed a `text` binding loop on the window-height input (reactive binding written back from `onTextChanged`); the field is now seeded once via `Component.onCompleted`
+
+### Settings
+
+- New "Hyprland Lua Path" + parser-mode controls and an "Undescribed Binds" section
+- Added i18n keys across all 20 language files (English fallback, Polish localized)
+
 ## [3.4.0] - 2026-04-07
 
 ### Bug Fixes

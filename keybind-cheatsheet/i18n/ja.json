@@ -9,7 +9,8 @@
     "mango-not-supported": "MangoWCはサポートされていません",
     "mango-detail": "MangoWCの設定形式はこのプラグインと互換性がありません",
     "unknown-compositor": "不明なコンポジターが検出されました",
-    "unknown-detail": "このプラグインはHyprlandとNiriコンポジターのみをサポートしています"
+    "unknown-detail": "このプラグインはHyprlandとNiriコンポジターのみをサポートしています",
+    "hyprctl-failed": "hyprctl binds failed - is Hyprland running?"
   },
   "panel": {
     "loading": "読み込み中...",
@@ -19,7 +20,15 @@
     "workspace-switching": "ワークスペース - 切り替え",
     "workspace-moving": "ワークスペース - 移動",
     "workspace-mouse": "ワークスペース - マウス",
-    "search-placeholder": "キーバインドを検索..."
+    "search-placeholder": "キーバインドを検索...",
+    "other": "Other",
+    "undescribed": "Without Description",
+    "no-description": "(no description)",
+    "add-description": "Add description",
+    "add-description-placeholder": "Description...",
+    "save-description": "Save",
+    "cancel": "Cancel",
+    "hide-bind": "Hide this bind"
   },
   "settings": {
     "title": "キーバインド一覧の設定",
@@ -51,7 +60,18 @@
     "width-range": "px (400-3000)",
     "height-range": "px (300-2000)",
     "hyprland-path": "Hyprland パス",
-    "niri-path": "Niri パス"
+    "niri-path": "Niri パス",
+    "hyprland-lua-path": "Hyprland Lua Path",
+    "hyprland-parser-mode": "Parser:",
+    "hyprland-lua-hint": "Auto: uses hyprland.lua via `hyprctl binds` when it exists, otherwise the legacy .conf parser.",
+    "undescribed-title": "Undescribed Binds",
+    "show-undescribed": "Show binds without a description",
+    "show-undescribed-hint": "When enabled, binds with no description appear in a dedicated section where you can add a description or hide them.",
+    "overrides-summary": "Hidden: {hidden} - Custom descriptions: {custom}",
+    "restore-hidden": "Restore hidden",
+    "restore-hidden-message": "Hidden binds restored.",
+    "clear-overrides": "Clear all overrides",
+    "clear-overrides-message": "All bind overrides cleared."
   },
   "barwidget": {
     "tooltip": "キーバインドチートシート",

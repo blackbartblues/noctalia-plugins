@@ -69,6 +69,9 @@ Item {
   property int editColumnCount: cfg.columnCount ?? defaults.columnCount ?? 3
   property string editModKeyVariable: cfg.modKeyVariable || defaults.modKeyVariable || "$mod"
   property string editHyprlandConfigPath: cfg.hyprlandConfigPath || defaults.hyprlandConfigPath || "~/.config/hypr/hyprland.conf"
+  property string editHyprlandLuaConfigPath: cfg.hyprlandLuaConfigPath || defaults.hyprlandLuaConfigPath || "~/.config/hypr/hyprland.lua"
+  property string editHyprlandParserMode: cfg.hyprlandParserMode || defaults.hyprlandParserMode || "auto"
+  property bool editShowUndescribedBinds: cfg.showUndescribedBinds ?? defaults.showUndescribedBinds ?? true
   property string editNiriConfigPath: cfg.niriConfigPath || defaults.niriConfigPath || "~/.config/niri/config.kdl"
 
   // Header
@@ -164,7 +167,7 @@ Item {
           id: heightInput
           Layout.preferredWidth: 100 * Style.uiScaleRatio
           Layout.preferredHeight: Style.baseWidgetSize
-          text: root.editWindowHeight > 0 ? root.editWindowHeight.toString() : "850"
+          Component.onCompleted: text = root.editWindowHeight > 0 ? root.editWindowHeight.toString() : "850"
           enabled: !autoHeightToggle.checked
           opacity: enabled ? 1.0 : 0.5
 
@@ -364,6 +367,67 @@ Item {
         }
       }
 
+      // Hyprland Lua path + parser mode
+      ColumnLayout {
+        spacing: Style.marginXS
+
+        RowLayout {
+          spacing: Style.marginS
+          NIcon {
+            icon: "terminal"
+            pointSize: Style.fontSizeM
+            color: Color.mPrimary
+          }
+          NText {
+            text: rootItem.pluginApi?.tr("settings.hyprland-lua-path")
+            color: Color.mOnSurface
+            pointSize: Style.fontSizeM
+            font.weight: Style.fontWeightBold
+          }
+        }
+
+        NTextInput {
+          id: hyprlandLuaPathInput
+          Layout.fillWidth: true
+          Layout.preferredHeight: Style.baseWidgetSize
+          text: root.editHyprlandLuaConfigPath
+          placeholderText: "~/.config/hypr/hyprland.lua"
+
+          onTextChanged: {
+            if (text.length > 0) root.editHyprlandLuaConfigPath = text;
+          }
+        }
+
+        RowLayout {
+          spacing: Style.marginM
+          NText {
+            text: rootItem.pluginApi?.tr("settings.hyprland-parser-mode")
+            color: Color.mOnSurface
+            pointSize: Style.fontSizeM
+          }
+          NComboBox {
+            id: parserModeCombo
+            Layout.preferredWidth: 180 * Style.uiScaleRatio
+            Layout.preferredHeight: Style.baseWidgetSize
+            model: ListModel {
+              ListElement { name: "Auto"; key: "auto" }
+              ListElement { name: "Lua (hyprctl)"; key: "lua" }
+              ListElement { name: "Legacy .conf"; key: "conf" }
+            }
+            currentKey: root.editHyprlandParserMode
+            onSelected: key => { root.editHyprlandParserMode = key; }
+          }
+        }
+
+        NText {
+          Layout.fillWidth: true
+          text: rootItem.pluginApi?.tr("settings.hyprland-lua-hint")
+          color: Color.mOnSurfaceVariant
+          pointSize: Style.fontSizeXS
+          wrapMode: Text.WordWrap
+        }
+      }
+
       Rectangle {
         Layout.preferredHeight: 1
         color: Color.mOutline
@@ -407,6 +471,99 @@ Item {
           color: Color.mOnSurfaceVariant
           pointSize: Style.fontSizeXS
           wrapMode: Text.WordWrap
+        }
+      }
+    }
+  }
+
+  // Undescribed / hidden binds (Hyprland lua tor)
+  NBox {
+    Layout.fillWidth: true
+    Layout.preferredHeight: undescContent.implicitHeight + Style.marginM * 2
+    color: Color.mSurfaceVariant
+
+    ColumnLayout {
+      id: undescContent
+      anchors.fill: parent
+      anchors.margins: Style.marginM
+      spacing: Style.marginS
+
+      function overrideCount(kind) {
+        var o = rootItem.pluginApi?.pluginSettings?.bindOverrides || ({});
+        var n = 0;
+        for (var k in o) {
+          if (kind === "hidden" && o[k] && o[k].hidden === true) n++;
+          else if (kind === "desc" && o[k] && o[k].desc) n++;
+        }
+        return n;
+      }
+
+      NText {
+        Layout.fillWidth: true
+        text: rootItem.pluginApi?.tr("settings.undescribed-title")
+        pointSize: Style.fontSizeL
+        font.weight: Style.fontWeightBold
+        color: Color.mOnSurface
+      }
+
+      NToggle {
+        label: rootItem.pluginApi?.tr("settings.show-undescribed")
+        checked: root.editShowUndescribedBinds
+        onToggled: function(checked) { root.editShowUndescribedBinds = checked; }
+      }
+
+      NText {
+        Layout.fillWidth: true
+        text: rootItem.pluginApi?.tr("settings.show-undescribed-hint")
+        color: Color.mOnSurfaceVariant
+        pointSize: Style.fontSizeXS
+        wrapMode: Text.WordWrap
+      }
+
+      NText {
+        Layout.fillWidth: true
+        text: rootItem.pluginApi?.tr("settings.overrides-summary")
+              .replace("{hidden}", undescContent.overrideCount("hidden"))
+              .replace("{custom}", undescContent.overrideCount("desc"))
+        color: Color.mOnSurfaceVariant
+        pointSize: Style.fontSizeS
+        wrapMode: Text.WordWrap
+      }
+
+      RowLayout {
+        spacing: Style.marginM
+
+        NButton {
+          text: rootItem.pluginApi?.tr("settings.restore-hidden")
+          icon: "eye"
+          onClicked: {
+            var o = rootItem.pluginApi?.pluginSettings?.bindOverrides || ({});
+            var next = ({});
+            for (var k in o) {
+              var e = ({});
+              if (o[k] && o[k].desc) e.desc = o[k].desc;
+              if (Object.keys(e).length > 0) next[k] = e;
+            }
+            if (rootItem.pluginApi && rootItem.pluginApi.pluginSettings) {
+              rootItem.pluginApi.pluginSettings.bindOverrides = next;
+              rootItem.pluginApi.saveSettings();
+              rootItem.pluginApi.mainInstance?.refresh();
+            }
+            ToastService.showNotice(rootItem.pluginApi?.tr("settings.restore-hidden-message"));
+          }
+        }
+
+        NButton {
+          text: rootItem.pluginApi?.tr("settings.clear-overrides")
+          icon: "rotate"
+          onClicked: {
+            if (rootItem.pluginApi && rootItem.pluginApi.pluginSettings) {
+              rootItem.pluginApi.pluginSettings.bindOverrides = ({});
+              rootItem.pluginApi.saveSettings();
+              rootItem.pluginApi.mainInstance?.refresh();
+            }
+            ToastService.showNotice(rootItem.pluginApi?.tr("settings.clear-overrides-message"));
+          }
         }
       }
     }
@@ -456,12 +613,16 @@ Item {
             root.editColumnCount = defaults.columnCount || 3;
             root.editModKeyVariable = defaults.modKeyVariable || "$mod";
             root.editHyprlandConfigPath = defaults.hyprlandConfigPath || "~/.config/hypr/hyprland.conf";
+            root.editHyprlandLuaConfigPath = defaults.hyprlandLuaConfigPath || "~/.config/hypr/hyprland.lua";
+            root.editHyprlandParserMode = defaults.hyprlandParserMode || "auto";
+            root.editShowUndescribedBinds = defaults.showUndescribedBinds ?? true;
             root.editNiriConfigPath = defaults.niriConfigPath || "~/.config/niri/config.kdl";
 
             widthInput.text = root.editWindowWidth.toString();
             heightInput.text = "850";
             modVarInput.text = root.editModKeyVariable;
             hyprlandPathInput.text = root.editHyprlandConfigPath;
+            hyprlandLuaPathInput.text = root.editHyprlandLuaConfigPath;
             niriPathInput.text = root.editNiriConfigPath;
 
             if (rootItem.pluginApi && rootItem.pluginApi.pluginSettings) {
@@ -558,6 +719,9 @@ Item {
     pluginApi.pluginSettings.columnCount = root.editColumnCount;
     pluginApi.pluginSettings.modKeyVariable = root.editModKeyVariable;
     pluginApi.pluginSettings.hyprlandConfigPath = root.editHyprlandConfigPath;
+    pluginApi.pluginSettings.hyprlandLuaConfigPath = root.editHyprlandLuaConfigPath;
+    pluginApi.pluginSettings.hyprlandParserMode = root.editHyprlandParserMode;
+    pluginApi.pluginSettings.showUndescribedBinds = root.editShowUndescribedBinds;
     pluginApi.pluginSettings.niriConfigPath = root.editNiriConfigPath;
     pluginApi.saveSettings();
     ToastService.showNotice(

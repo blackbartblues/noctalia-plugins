@@ -9,7 +9,8 @@
     "mango-not-supported": "MangoWC er ikkje støtta",
     "mango-detail": "MangoWC-konfigurasjonsformatet er ikkje kompatibelt med denne plugin-en",
     "unknown-compositor": "Ukjend compositor oppdaga",
-    "unknown-detail": "Denne plugin-en støttar berre Hyprland- og Niri-compositorar"
+    "unknown-detail": "Denne plugin-en støttar berre Hyprland- og Niri-compositorar",
+    "hyprctl-failed": "hyprctl binds failed - is Hyprland running?"
   },
   "panel": {
     "loading": "Lastar...",
@@ -19,7 +20,15 @@
     "workspace-switching": "ARBEIDSOMRÅDE - BYTTE",
     "workspace-moving": "ARBEIDSOMRÅDE - FLYTTE",
     "workspace-mouse": "ARBEIDSOMRÅDE - MUS",
-    "search-placeholder": "Søk etter snarveiar..."
+    "search-placeholder": "Søk etter snarveiar...",
+    "other": "Other",
+    "undescribed": "Without Description",
+    "no-description": "(no description)",
+    "add-description": "Add description",
+    "add-description-placeholder": "Description...",
+    "save-description": "Save",
+    "cancel": "Cancel",
+    "hide-bind": "Hide this bind"
   },
   "settings": {
     "title": "Tastesnarveg-jukselapp Innstillingar",
@@ -51,7 +60,18 @@
     "width-range": "px (400-3000)",
     "height-range": "px (300-2000)",
     "hyprland-path": "Hyprland-sti",
-    "niri-path": "Niri-sti"
+    "niri-path": "Niri-sti",
+    "hyprland-lua-path": "Hyprland Lua Path",
+    "hyprland-parser-mode": "Parser:",
+    "hyprland-lua-hint": "Auto: uses hyprland.lua via `hyprctl binds` when it exists, otherwise the legacy .conf parser.",
+    "undescribed-title": "Undescribed Binds",
+    "show-undescribed": "Show binds without a description",
+    "show-undescribed-hint": "When enabled, binds with no description appear in a dedicated section where you can add a description or hide them.",
+    "overrides-summary": "Hidden: {hidden} - Custom descriptions: {custom}",
+    "restore-hidden": "Restore hidden",
+    "restore-hidden-message": "Hidden binds restored.",
+    "clear-overrides": "Clear all overrides",
+    "clear-overrides-message": "All bind overrides cleared."
   },
   "barwidget": {
     "tooltip": "Tastesnarveg-jukselapp",

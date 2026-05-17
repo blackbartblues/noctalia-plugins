@@ -9,7 +9,8 @@
     "mango-not-supported": "MangoWC wird nicht unterstützt",
     "mango-detail": "Das MangoWC-Konfigurationsformat ist mit diesem Plugin nicht kompatibel",
     "unknown-compositor": "Unbekannter Compositor erkannt",
-    "unknown-detail": "Dieses Plugin unterstützt nur Niri und Hyprland als Compositor"
+    "unknown-detail": "Dieses Plugin unterstützt nur Niri und Hyprland als Compositor",
+    "hyprctl-failed": "hyprctl binds failed - is Hyprland running?"
   },
   "panel": {
     "loading": "Laden...",
@@ -19,7 +20,15 @@
     "workspace-switching": "ARBEITSBEREICHE - WECHSELN",
     "workspace-moving": "ARBEITSBEREICHE - VERSCHIEBEN",
     "workspace-mouse": "ARBEITSBEREICHE - MAUS",
-    "search-placeholder": "Tastenbelegung suchen..."
+    "search-placeholder": "Tastenbelegung suchen...",
+    "other": "Other",
+    "undescribed": "Without Description",
+    "no-description": "(no description)",
+    "add-description": "Add description",
+    "add-description-placeholder": "Description...",
+    "save-description": "Save",
+    "cancel": "Cancel",
+    "hide-bind": "Hide this bind"
   },
   "settings": {
     "title": "Tastenkürzel-Ubersicht Einstellungen",
@@ -51,7 +60,18 @@
     "width-range": "px (400-3000)",
     "height-range": "px (300-2000)",
     "hyprland-path": "Hyprland Pfad",
-    "niri-path": "Niri Pfad"
+    "niri-path": "Niri Pfad",
+    "hyprland-lua-path": "Hyprland Lua Path",
+    "hyprland-parser-mode": "Parser:",
+    "hyprland-lua-hint": "Auto: uses hyprland.lua via `hyprctl binds` when it exists, otherwise the legacy .conf parser.",
+    "undescribed-title": "Undescribed Binds",
+    "show-undescribed": "Show binds without a description",
+    "show-undescribed-hint": "When enabled, binds with no description appear in a dedicated section where you can add a description or hide them.",
+    "overrides-summary": "Hidden: {hidden} - Custom descriptions: {custom}",
+    "restore-hidden": "Restore hidden",
+    "restore-hidden-message": "Hidden binds restored.",
+    "clear-overrides": "Clear all overrides",
+    "clear-overrides-message": "All bind overrides cleared."
   },
   "barwidget": {
     "tooltip": "Tastenkürzel-Spickzettel",

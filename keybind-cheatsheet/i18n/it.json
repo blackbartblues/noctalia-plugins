@@ -9,7 +9,8 @@
     "mango-not-supported": "MangoWC non è supportato",
     "mango-detail": "Il formato di configurazione MangoWC non è compatibile con questo plugin",
     "unknown-compositor": "Rilevato compositor sconosciuto",
-    "unknown-detail": "Questo plugin supporta solo i compositor Hyprland e Niri"
+    "unknown-detail": "Questo plugin supporta solo i compositor Hyprland e Niri",
+    "hyprctl-failed": "hyprctl binds failed - is Hyprland running?"
   },
   "panel": {
     "loading": "Caricamento...",
@@ -19,7 +20,15 @@
     "workspace-switching": "SPAZI DI LAVORO - CAMBIO",
     "workspace-moving": "SPAZI DI LAVORO - SPOSTAMENTO",
     "workspace-mouse": "SPAZI DI LAVORO - MOUSE",
-    "search-placeholder": "Cerca scorciatoie..."
+    "search-placeholder": "Cerca scorciatoie...",
+    "other": "Other",
+    "undescribed": "Without Description",
+    "no-description": "(no description)",
+    "add-description": "Add description",
+    "add-description-placeholder": "Description...",
+    "save-description": "Save",
+    "cancel": "Cancel",
+    "hide-bind": "Hide this bind"
   },
   "settings": {
     "title": "Impostazioni Scorciatoie da Tastiera",
@@ -51,7 +60,18 @@
     "width-range": "px (400-3000)",
     "height-range": "px (300-2000)",
     "hyprland-path": "Percorso Hyprland",
-    "niri-path": "Percorso Niri"
+    "niri-path": "Percorso Niri",
+    "hyprland-lua-path": "Hyprland Lua Path",
+    "hyprland-parser-mode": "Parser:",
+    "hyprland-lua-hint": "Auto: uses hyprland.lua via `hyprctl binds` when it exists, otherwise the legacy .conf parser.",
+    "undescribed-title": "Undescribed Binds",
+    "show-undescribed": "Show binds without a description",
+    "show-undescribed-hint": "When enabled, binds with no description appear in a dedicated section where you can add a description or hide them.",
+    "overrides-summary": "Hidden: {hidden} - Custom descriptions: {custom}",
+    "restore-hidden": "Restore hidden",
+    "restore-hidden-message": "Hidden binds restored.",
+    "clear-overrides": "Clear all overrides",
+    "clear-overrides-message": "All bind overrides cleared."
   },
   "barwidget": {
     "tooltip": "Scheda scorciatoie",

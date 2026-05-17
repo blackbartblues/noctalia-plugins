@@ -9,7 +9,8 @@
     "mango-not-supported": "MangoWC n'est pas pris en charge",
     "mango-detail": "Le format de configuration MangoWC n'est pas compatible avec ce plugin",
     "unknown-compositor": "Compositeur inconnu détecté",
-    "unknown-detail": "Ce plugin ne prend en charge que les compositeurs Hyprland et Niri"
+    "unknown-detail": "Ce plugin ne prend en charge que les compositeurs Hyprland et Niri",
+    "hyprctl-failed": "hyprctl binds failed - is Hyprland running?"
   },
   "panel": {
     "loading": "Chargement...",
@@ -19,7 +20,15 @@
     "workspace-switching": "ESPACES DE TRAVAIL - BASCULER",
     "workspace-moving": "ESPACES DE TRAVAIL - DÉPLACER",
     "workspace-mouse": "ESPACES DE TRAVAIL - SOURIS",
-    "search-placeholder": "Rechercher des raccourcis..."
+    "search-placeholder": "Rechercher des raccourcis...",
+    "other": "Other",
+    "undescribed": "Without Description",
+    "no-description": "(no description)",
+    "add-description": "Add description",
+    "add-description-placeholder": "Description...",
+    "save-description": "Save",
+    "cancel": "Cancel",
+    "hide-bind": "Hide this bind"
   },
   "settings": {
     "title": "Parametres des Raccourcis Clavier",
@@ -51,7 +60,18 @@
     "width-range": "px (400-3000)",
     "height-range": "px (300-2000)",
     "hyprland-path": "Chemin Hyprland",
-    "niri-path": "Chemin Niri"
+    "niri-path": "Chemin Niri",
+    "hyprland-lua-path": "Hyprland Lua Path",
+    "hyprland-parser-mode": "Parser:",
+    "hyprland-lua-hint": "Auto: uses hyprland.lua via `hyprctl binds` when it exists, otherwise the legacy .conf parser.",
+    "undescribed-title": "Undescribed Binds",
+    "show-undescribed": "Show binds without a description",
+    "show-undescribed-hint": "When enabled, binds with no description appear in a dedicated section where you can add a description or hide them.",
+    "overrides-summary": "Hidden: {hidden} - Custom descriptions: {custom}",
+    "restore-hidden": "Restore hidden",
+    "restore-hidden-message": "Hidden binds restored.",
+    "clear-overrides": "Clear all overrides",
+    "clear-overrides-message": "All bind overrides cleared."
   },
   "barwidget": {
     "tooltip": "Aide-mémoire des raccourcis",

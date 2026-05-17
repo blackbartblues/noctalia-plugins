@@ -9,7 +9,8 @@
     "mango-not-supported": "MangoWC nie jest obsługiwany",
     "mango-detail": "Format konfiguracji MangoWC nie jest kompatybilny z tą wtyczką",
     "unknown-compositor": "Wykryto nieznany kompozytor",
-    "unknown-detail": "Ta wtyczka obsługuje tylko kompozytory Hyprland i Niri"
+    "unknown-detail": "Ta wtyczka obsługuje tylko kompozytory Hyprland i Niri",
+    "hyprctl-failed": "hyprctl binds nie powiodło się - czy Hyprland działa?"
   },
   "panel": {
     "loading": "Ladowanie...",
@@ -19,7 +20,15 @@
     "workspace-switching": "OBSZARY ROBOCZE - PRZEŁĄCZANIE",
     "workspace-moving": "OBSZARY ROBOCZE - PRZENOSZENIE",
     "workspace-mouse": "OBSZARY ROBOCZE - MYSZ",
-    "search-placeholder": "Szukaj skrótów..."
+    "search-placeholder": "Szukaj skrótów...",
+    "other": "Inne",
+    "undescribed": "Bez opisu",
+    "no-description": "(brak opisu)",
+    "add-description": "Dodaj opis",
+    "add-description-placeholder": "Opis...",
+    "save-description": "Zapisz",
+    "cancel": "Anuluj",
+    "hide-bind": "Ukryj ten skrót"
   },
   "settings": {
     "title": "Ustawienia Skrotow Klawiszowych",
@@ -51,7 +60,18 @@
     "width-range": "px (400-3000)",
     "height-range": "px (300-2000)",
     "hyprland-path": "Ścieżka Hyprland",
-    "niri-path": "Ścieżka Niri"
+    "niri-path": "Ścieżka Niri",
+    "hyprland-lua-path": "Ścieżka Hyprland Lua",
+    "hyprland-parser-mode": "Parser:",
+    "hyprland-lua-hint": "Auto: używa hyprland.lua przez `hyprctl binds` jeśli istnieje, w innym wypadku starego parsera .conf.",
+    "undescribed-title": "Skróty bez opisu",
+    "show-undescribed": "Pokaż skróty bez opisu",
+    "show-undescribed-hint": "Gdy włączone, skróty bez opisu pojawiają się w osobnej sekcji, gdzie można dodać opis lub je ukryć.",
+    "overrides-summary": "Ukryte: {hidden} - Własne opisy: {custom}",
+    "restore-hidden": "Przywróć ukryte",
+    "restore-hidden-message": "Ukryte skróty przywrócone.",
+    "clear-overrides": "Wyczyść wszystkie nadpisania",
+    "clear-overrides-message": "Wszystkie nadpisania skrótów wyczyszczone."
   },
   "barwidget": {
     "tooltip": "Ściągawka skrótów klawiszowych",
